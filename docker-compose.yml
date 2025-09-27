@@ -1,0 +1,30 @@
+networks:
+  backend_network:
+    external: true
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    networks:
+      - backend_network
+    depends_on:
+      - db
+    environment:
+      - POSTGRES_ADDR=${POSTGRES_ADDR}
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+  db:
+    image: postgres:16-alpine3.19
+    restart: unless-stopped
+    command: postgres -c 'max_connections=500'
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - ${POSTGRES_PORT}:5432
+    volumes:
+      - ./vol/data/postgres:/var/lib/postgresql/data
+    networks:
+      - backend_network
