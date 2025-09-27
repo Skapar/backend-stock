@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/onec-tech/bot/config"
-	"github.com/onec-tech/bot/internal/bot"
+	"github.com/onec-tech/bot/internal/models/entities"
 	"github.com/onec-tech/bot/internal/repository"
 	"github.com/onec-tech/bot/pkg/cache"
 	"github.com/onec-tech/bot/pkg/logger"
@@ -15,7 +15,6 @@ type service struct {
 	cache        cache.ICache
 	log          logger.Logger
 	config       *config.Config
-	bot          bot.Bot
 }
 
 type SConfig struct {
@@ -34,10 +33,11 @@ func NewService(cfg *SConfig) (Service, error) {
 	}, nil
 }
 
-func (s *service) StartTelegramBot(ctx context.Context) error {
-	b, err := bot.New(s.config.TelegramToken, s.log) // вот тут используем New
+func (s *service) CreateOrUpdateUser(ctx context.Context, user *entities.User) error {
+	err := s.pgRepository.CreateOrUpdateUser(ctx, user)
 	if err != nil {
+		s.log.Errorf("failed to create user: %v", err)
 		return err
 	}
-	return b.Start(ctx)
+	return nil
 }

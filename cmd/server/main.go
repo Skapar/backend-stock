@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"github.com/onec-tech/bot/internal/bot"
 	"github.com/onec-tech/bot/internal/repository"
 	"github.com/onec-tech/bot/internal/service"
 	"github.com/onec-tech/bot/pkg/cache"
@@ -79,8 +80,9 @@ func main() {
 	}
 
 	// Telegram Bot init
+	tgBot, err := bot.NewBot(cfg.TelegramToken, log, srv)
 	go func() {
-		if err := srv.StartTelegramBot(context.Background()); err != nil {
+		if err := tgBot.Start(context.Background()); err != nil {
 			log.Errorf("telegram bot error: %v", err)
 		}
 	}()
@@ -93,7 +95,7 @@ func main() {
 	log.Info("Shutting down server...")
 
 	// Даем немного времени на завершение горутин
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 1*time.Microsecond)
 	defer shutdownCancel()
 
 	<-shutdownCtx.Done()

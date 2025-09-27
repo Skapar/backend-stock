@@ -1,6 +1,9 @@
 package repository
 
 import (
+	"context"
+
+	"github.com/onec-tech/bot/internal/models/entities"
 	"github.com/onec-tech/bot/pkg/database"
 	"github.com/onec-tech/bot/pkg/logger"
 )
@@ -15,4 +18,19 @@ func NewPGRepository(db database.IDatabase, log logger.Logger) PGRepository {
 		DB:  db,
 		log: log,
 	}
+}
+
+func (r *pgRepository) CreateOrUpdateUser(ctx context.Context, user *entities.User) error {
+	q := `
+	INSERT INTO onec_user (tg_id, nickname, name, phone)
+	VALUES ($1, $2, $3, $4)
+	ON CONFLICT (tg_id) 
+	DO UPDATE SET
+		nickname = EXCLUDED.nickname,
+		name = EXCLUDED.name,
+		phone = EXCLUDED.phone
+	RETURNING id;
+	`
+
+	return r.DB.Insert(ctx, user, q, user.TGID, user.Username, user.Name, user.Phone)
 }
