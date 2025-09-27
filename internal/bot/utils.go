@@ -1,5 +1,9 @@
 package bot
 
+import (
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+)
+
 func (b *telegramBot) reply(chatID int64, text string) {
 	msg := tgbotapi.NewMessage(chatID, text)
 	send, err := b.tg.Send(msg)
