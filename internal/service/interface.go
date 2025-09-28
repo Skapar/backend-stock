@@ -11,4 +11,5 @@ type Service interface {
 	GetUserByTGID(ctx context.Context, tgID int64) (*entities.User, error)
 
 	CreateReceipt(ctx context.Context, userID int64, filePath string) error
+	ProcessApprovedReceipts(ctx context.Context) error
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/onec-tech/bot/internal/models/entities"
 	"github.com/onec-tech/bot/pkg/database"
@@ -56,4 +57,46 @@ func (r *pgRepository) CreateReceipt(ctx context.Context, receipt *entities.Rece
 	RETURNING id;
 	`
 	return r.DB.Insert(ctx, receipt, q, receipt.UserID, receipt.FilePath, receipt.Status)
+}
+
+func (r *pgRepository) GetApprovedReceipts(ctx context.Context) ([]entities.Receipt, error) {
+	var receipts []entities.Receipt
+	q := `SELECT id, user_id, file_path, status FROM onec_receipt WHERE status = 'approved'`
+	err := r.DB.Get(ctx, &receipts, q)
+	return receipts, err
+}
+
+func (r *pgRepository) UpdateReceiptStatus(ctx context.Context, status entities.StatusType, receiptID int64) error {
+	q := `UPDATE onec_receipt SET status = $1 WHERE id = $2`
+	return r.DB.Update(ctx, nil, q, status, receiptID)
+}
+
+func (r *pgRepository) GetDefaultSubscription(ctx context.Context) (*entities.Subscription, error) {
+	var sub entities.Subscription
+	q := `SELECT id, price, duration_days, total_cups FROM onec_subscription WHERE id = 1`
+	err := r.DB.GetOne(ctx, &sub, q)
+	return &sub, err
+}
+
+func (r *pgRepository) CreateUserSubscription(ctx context.Context, userID int64, sub *entities.Subscription) (int64, error) {
+	start := time.Now()
+	end := start.AddDate(0, 0, int(sub.DurationDays))
+
+	var id int64
+	q := `
+		INSERT INTO onec_user_subscription 
+		    (user_id, subscription_id, start_date, end_date, total_cups, remaining_cups) 
+		VALUES ($1, $2, $3, $4, $5, $5)
+		RETURNING id
+	`
+	err := r.DB.Insert(ctx, &id, q, userID, sub.ID, start, end, sub.TotalCups)
+	return id, err
+}
+
+func (r *pgRepository) CreatePayment(ctx context.Context, userID, userSubID int64, amount int64) error {
+	q := `
+		INSERT INTO onec_payment (user_id, user_subscription_id, amount, status, payment_method)
+		VALUES ($1, $2, $3, 'confirmed', 'manual')
+	`
+	return r.DB.Insert(ctx, nil, q, userID, userSubID, amount)
 }

@@ -55,3 +55,39 @@ func (s *service) CreateReceipt(ctx context.Context, userID int64, filePath stri
 
 	return s.pgRepository.CreateReceipt(ctx, receipt)
 }
+
+func (s *service) ProcessApprovedReceipts(ctx context.Context) error {
+	receipts, err := s.pgRepository.GetApprovedReceipts(ctx)
+	if err != nil {
+		s.log.Errorf("failed to get approved receipts: %v", err)
+		return err
+	}
+
+	for _, r := range receipts {
+		err := s.pgRepository.UpdateReceiptStatus(ctx, entities.StatusConfirmed, r.ID)
+		if err != nil {
+			s.log.Errorf("failed to confirm receipt %d: %v", r.ID, err)
+			return err
+		}
+
+		sub, err := s.pgRepository.GetDefaultSubscription(ctx)
+		if err != nil {
+			s.log.Errorf("failed to get subscription for user %d: %v", r.UserID, err)
+			return err
+		}
+
+		userSubID, err := s.pgRepository.CreateUserSubscription(ctx, r.UserID, sub)
+		if err != nil {
+			s.log.Errorf("failed to create user subscription for user %d: %v", r.UserID, err)
+			return err
+		}
+
+		err = s.pgRepository.CreatePayment(ctx, r.UserID, userSubID, sub.Price)
+		if err != nil {
+			s.log.Errorf("failed to create payment for user %d: %v", r.UserID, err)
+			return err
+		}
+	}
+
+	return nil
+}

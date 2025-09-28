@@ -11,6 +11,7 @@ import (
 	"github.com/onec-tech/bot/internal/bot"
 	"github.com/onec-tech/bot/internal/repository"
 	"github.com/onec-tech/bot/internal/service"
+	"github.com/onec-tech/bot/internal/worker"
 	"github.com/onec-tech/bot/pkg/cache"
 	"github.com/onec-tech/bot/pkg/database"
 	"go.uber.org/zap"
@@ -95,6 +96,13 @@ func main() {
 			log.Errorf("telegram bot error: %v", err)
 		}
 	}()
+
+	wrk := worker.NewWorker(&worker.WorkerConfig{
+		Service: srv,
+		Log:     log,
+	})
+
+	wrk.Start()
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)

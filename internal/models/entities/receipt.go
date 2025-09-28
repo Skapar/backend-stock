@@ -13,7 +13,8 @@ type Receipt struct {
 type StatusType string
 
 const (
-	StatusPending  StatusType = "pending"
-	StatusApproved StatusType = "approved"
-	StatusRejected StatusType = "rejected"
+	StatusPending   StatusType = "pending"
+	StatusApproved  StatusType = "approved"
+	StatusRejected  StatusType = "rejected"
+	StatusConfirmed StatusType = "confirmed"
 )
