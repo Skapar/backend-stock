@@ -59,10 +59,15 @@ func (r *pgRepository) CreateReceipt(ctx context.Context, receipt *entities.Rece
 	return r.DB.Insert(ctx, receipt, q, receipt.UserID, receipt.FilePath, receipt.Status)
 }
 
-func (r *pgRepository) GetApprovedReceipts(ctx context.Context) ([]entities.Receipt, error) {
-	var receipts []entities.Receipt
-	q := `SELECT id, user_id, file_path, status FROM onec_receipt WHERE status = 'approved'`
-	err := r.DB.Get(ctx, &receipts, q)
+func (r *pgRepository) GetReceiptsByStatus(ctx context.Context, status entities.StatusType) ([]entities.ReceiptWithUser, error) {
+	var receipts []entities.ReceiptWithUser
+	q := `
+		SELECT r.id, r.user_id, r.file_path, r.status, u.tg_id
+		FROM onec_receipt r
+		JOIN onec_user u ON u.id = r.user_id
+		WHERE r.status = $1
+	`
+	err := r.DB.Get(ctx, &receipts, q, status)
 	return receipts, err
 }
 

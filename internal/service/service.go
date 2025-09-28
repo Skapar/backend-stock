@@ -15,6 +15,7 @@ type service struct {
 	cache        cache.ICache
 	log          logger.Logger
 	config       *config.Config
+	notifier     Notifier
 }
 
 type SConfig struct {
@@ -22,6 +23,7 @@ type SConfig struct {
 	Cache        cache.ICache
 	Log          logger.Logger
 	Config       *config.Config
+	Notifier     Notifier
 }
 
 func NewService(cfg *SConfig) (Service, error) {
@@ -30,6 +32,7 @@ func NewService(cfg *SConfig) (Service, error) {
 		cache:        cfg.Cache,
 		log:          cfg.Log,
 		config:       cfg.Config,
+		notifier:     cfg.Notifier,
 	}, nil
 }
 
@@ -57,7 +60,7 @@ func (s *service) CreateReceipt(ctx context.Context, userID int64, filePath stri
 }
 
 func (s *service) ProcessApprovedReceipts(ctx context.Context) error {
-	receipts, err := s.pgRepository.GetApprovedReceipts(ctx)
+	receipts, err := s.pgRepository.GetReceiptsByStatus(ctx, entities.StatusApproved)
 	if err != nil {
 		s.log.Errorf("failed to get approved receipts: %v", err)
 		return err
@@ -86,6 +89,13 @@ func (s *service) ProcessApprovedReceipts(ctx context.Context) error {
 		if err != nil {
 			s.log.Errorf("failed to create payment for user %d: %v", r.UserID, err)
 			return err
+		}
+
+		if s.notifier != nil {
+			err = s.notifier.Notify(ctx, r.TgID, "Ваша подписка подтверждена!")
+			if err != nil {
+				s.log.Errorf("failed to notify user %d: %v", r.UserID, err)
+			}
 		}
 	}
 

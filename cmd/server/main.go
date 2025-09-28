@@ -75,6 +75,7 @@ func main() {
 		Cache:        cacheImpl,
 		Log:          log,
 		Config:       cfg,
+		Notifier:     nil,
 	})
 	if err != nil {
 		log.Fatalf("failed to init service: %v", err)
@@ -88,6 +89,17 @@ func main() {
 	})
 	if err != nil {
 		log.Fatalf("failed to init telegram bot: %v", err)
+	}
+
+	srv, err = service.NewService(&service.SConfig{
+		PGRepository: pgRepository,
+		Cache:        cacheImpl,
+		Log:          log,
+		Config:       cfg,
+		Notifier:     tgBot, // бот умеет Notify()
+	})
+	if err != nil {
+		log.Fatalf("failed to re-init service with notifier: %v", err)
 	}
 
 	// Start Telegram Bot

@@ -13,3 +13,7 @@ type Service interface {
 	CreateReceipt(ctx context.Context, userID int64, filePath string) error
 	ProcessApprovedReceipts(ctx context.Context) error
 }
+
+type Notifier interface {
+	Notify(ctx context.Context, tgID int64, message string) error
+}

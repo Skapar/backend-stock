@@ -60,3 +60,9 @@ func (b *telegramBot) Start(ctx context.Context) error {
 		}
 	}
 }
+
+func (b *telegramBot) Notify(ctx context.Context, tgID int64, message string) error {
+	msg := tgbotapi.NewMessage(tgID, message)
+	_, err := b.tg.Send(msg)
+	return err
+}

@@ -13,7 +13,7 @@ type PGRepository interface {
 
 	// Receipt
 	CreateReceipt(ctx context.Context, receipt *entities.Receipt) error
-	GetApprovedReceipts(ctx context.Context) ([]entities.Receipt, error)
+	GetReceiptsByStatus(ctx context.Context, status entities.StatusType) ([]entities.ReceiptWithUser, error)
 	UpdateReceiptStatus(ctx context.Context, status entities.StatusType, receiptID int64) error
 	GetDefaultSubscription(ctx context.Context) (*entities.Subscription, error)
 
