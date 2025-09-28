@@ -1,6 +1,6 @@
 package bot
 
-// Button Names
+// Command Names
 const (
 	STARTBUTTONNAME = "start"
 )
