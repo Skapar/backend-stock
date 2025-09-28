@@ -80,7 +80,16 @@ func main() {
 	}
 
 	// Telegram Bot init
-	tgBot, err := bot.NewBot(cfg.TelegramToken, log, srv)
+	tgBot, err := bot.NewBot(&bot.BotConfig{
+		Service: srv,
+		Log:     log,
+		Config:  cfg,
+	})
+	if err != nil {
+		log.Fatalf("failed to init telegram bot: %v", err)
+	}
+
+	// Start Telegram Bot
 	go func() {
 		if err := tgBot.Start(context.Background()); err != nil {
 			log.Errorf("telegram bot error: %v", err)

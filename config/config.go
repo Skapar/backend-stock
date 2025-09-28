@@ -12,6 +12,7 @@ type Config struct {
 	PostgresAddr   string `envconfig:"POSTGRES_ADDR" default:""`
 
 	TelegramToken string `envconfig:"TELEGRAM_TOKEN" default:""`
+	TelegramDebug bool   `envconfig:"TELEGRAM_DEBUG" default:"false"`
 }
 
 // New Config constructor.

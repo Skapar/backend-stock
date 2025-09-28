@@ -4,6 +4,7 @@ import (
 	"context"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/onec-tech/bot/config"
 	"github.com/onec-tech/bot/internal/service"
 	"github.com/onec-tech/bot/pkg/logger"
 )
@@ -12,20 +13,28 @@ type telegramBot struct {
 	tg      *tgbotapi.BotAPI
 	log     logger.Logger
 	service service.Service
+	config  *config.Config
 }
 
-func NewBot(token string, log logger.Logger, service service.Service) (Bot, error) {
-	tg, err := tgbotapi.NewBotAPI(token)
+type BotConfig struct {
+	Service service.Service
+	Log     logger.Logger
+	Config  *config.Config
+}
+
+func NewBot(cfg *BotConfig) (Bot, error) {
+	tg, err := tgbotapi.NewBotAPI(cfg.Config.TelegramToken)
 	if err != nil {
 		return nil, err
 	}
 
-	tg.Debug = false
+	tg.Debug = cfg.Config.TelegramDebug
 
 	return &telegramBot{
 		tg:      tg,
-		log:     log,
-		service: service,
+		service: cfg.Service,
+		log:     cfg.Log,
+		config:  cfg.Config,
 	}, nil
 }
 
