@@ -7,6 +7,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    volumes:
+      - ./receipts:/app/receipts
     restart: always
     networks:
       - backend_network
