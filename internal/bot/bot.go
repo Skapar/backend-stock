@@ -43,11 +43,18 @@ func (b *telegramBot) Start(ctx context.Context) error {
 	u.Timeout = 60
 
 	updates := b.tg.GetUpdatesChan(u)
+	sem := make(chan struct{}, b.config.MaxWorkers)
 
 	for {
 		select {
 		case update := <-updates:
-			b.handleUpdate(update)
+			sem <- struct{}{}
+
+			go func(update tgbotapi.Update) {
+				defer func() { <-sem }()
+				b.handleUpdate(update)
+			}(update)
+
 		case <-ctx.Done():
 			return ctx.Err()
 		}

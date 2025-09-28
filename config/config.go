@@ -13,6 +13,8 @@ type Config struct {
 
 	TelegramToken string `envconfig:"TELEGRAM_TOKEN" default:""`
 	TelegramDebug bool   `envconfig:"TELEGRAM_DEBUG" default:"false"`
+
+	MaxWorkers int `envconfig:"MAX_WORKERS" default:"10"`
 }
 
 // New Config constructor.
