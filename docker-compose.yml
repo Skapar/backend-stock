@@ -2,13 +2,16 @@ networks:
   backend_network:
     external: true
 
+volumes:
+  receipts_data:
+
 services:
   backend:
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ./receipts:/app/receipts
+      - receipts_data:/app/receipts
     restart: always
     networks:
       - backend_network
