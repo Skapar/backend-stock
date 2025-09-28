@@ -25,8 +25,8 @@ func (b *telegramBot) sendStartMessage(chatID int64) {
 }
 
 func (b *telegramBot) sendPostRegistrationKeyboard(chatID int64) {
-	getPaymentBtn := tgbotapi.NewKeyboardButton("Получение реквизитов для оплаты")
-	sendReceiptBtn := tgbotapi.NewKeyboardButton("Отправка чека об оплате")
+	getPaymentBtn := tgbotapi.NewKeyboardButton(GETPAYMENTTEXT)
+	sendReceiptBtn := tgbotapi.NewKeyboardButton(SENDRECEIPTTEXT)
 	keyboard := tgbotapi.NewReplyKeyboard(
 		tgbotapi.NewKeyboardButtonRow(getPaymentBtn),
 		tgbotapi.NewKeyboardButtonRow(sendReceiptBtn),

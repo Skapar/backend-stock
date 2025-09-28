@@ -14,6 +14,8 @@ const (
 	STARTGREETINGTEXT    = "Добро пожаловать в OneCoffee! Пожалуйста, отправьте ваше имя и номер телефона."
 	SENDCONTACTTEXT      = "Отправить cвой контакт"
 	THANKYOUREGISTERTEXT = "Спасибо, %s! Вы успешно зарегистрированы в OneCoffee."
+	GETPAYMENTTEXT       = "Получение реквизитов для оплаты"
+	SENDRECEIPTTEXT      = "Отправка чека об оплате"
 )
 
 // Error texts
