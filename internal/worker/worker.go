@@ -40,7 +40,7 @@ func (w *worker) Stop() {
 }
 
 func (w *worker) startProcessApprovedReceipts() {
-	_, err := w.scheduler.Every(1).Minute().Do(func() {
+	_, err := w.scheduler.Every(5).Seconds().Do(func() {
 		w.log.Info("ProcessApprovedReceipts task started")
 		err := w.service.ProcessApprovedReceipts(context.Background())
 		if err != nil {
