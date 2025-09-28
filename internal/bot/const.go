@@ -22,6 +22,7 @@ const (
 	THANKYOUREGISTERTEXT    = "Спасибо, %s! Вы успешно зарегистрированы в OneCoffee."
 	PAYMENTDETAILSTEXT      = "Вот реквизиты для оплаты:\n\nНазвание: OneCoffee\nНомер карты: 1234 5678 9012 3456\nБанк: ExampleBank\nНазначение платежа: подписка на кофе"
 	ASKRECEIPTTEXT          = "Пожалуйста, отправьте фото или файл с чеком об оплате."
+	MYSUBSCRIPTIONTEXT      = "Моя подписка"
 )
 
 // Error texts

@@ -105,3 +105,19 @@ func (r *pgRepository) CreatePayment(ctx context.Context, userID, userSubID int6
 	`
 	return r.DB.Insert(ctx, nil, q, userID, userSubID, amount)
 }
+
+func (r *pgRepository) GetActiveSubscription(ctx context.Context, userID int64) (*entities.UserSubscription, error) {
+	var sub entities.UserSubscription
+	q := `
+		SELECT id, user_id, subscription_id, start_date, end_date, total_cups, remaining_cups
+		FROM onec_user_subscription
+		WHERE user_id = $1 AND end_date > NOW()
+		ORDER BY end_date DESC
+		LIMIT 1
+	`
+	err := r.DB.GetOne(ctx, &sub, q, userID)
+	if err != nil {
+		return nil, err
+	}
+	return &sub, nil
+}

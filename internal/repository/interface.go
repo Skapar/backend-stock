@@ -19,6 +19,7 @@ type PGRepository interface {
 
 	// UserSubcription
 	CreateUserSubscription(ctx context.Context, userID int64, sub *entities.Subscription) (int64, error)
+	GetActiveSubscription(ctx context.Context, userID int64) (*entities.UserSubscription, error)
 
 	// Payment
 	CreatePayment(ctx context.Context, userID, userSubID int64, amount int64) error

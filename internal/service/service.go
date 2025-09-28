@@ -101,3 +101,7 @@ func (s *service) ProcessApprovedReceipts(ctx context.Context) error {
 
 	return nil
 }
+
+func (s *service) GetActiveSubscription(ctx context.Context, userID int64) (*entities.UserSubscription, error) {
+	return s.pgRepository.GetActiveSubscription(ctx, userID)
+}

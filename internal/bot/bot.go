@@ -30,6 +30,24 @@ func NewBot(cfg *BotConfig) (Bot, error) {
 
 	tg.Debug = cfg.Config.TelegramDebug
 
+	commands := []tgbotapi.BotCommand{
+		{
+			Command:     "start",
+			Description: "Начать работу",
+		},
+		{
+			Command:     "mysubscription",
+			Description: "Моя подписка",
+		},
+	}
+
+	setCmdCfg := tgbotapi.NewSetMyCommands(commands...)
+
+	_, err = tg.Request(setCmdCfg)
+	if err != nil {
+		cfg.Log.Errorf("failed to set commands: %v", err)
+	}
+
 	return &telegramBot{
 		tg:      tg,
 		service: cfg.Service,

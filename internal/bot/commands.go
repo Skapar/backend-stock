@@ -14,6 +14,8 @@ func (b *telegramBot) handleCommand(update tgbotapi.Update) {
 	switch update.Message.Command() {
 	case STARTBUTTON:
 		b.sendStartMessage(update.Message.Chat.ID)
+	case "mysubscription":
+		b.sendMySubscription(update.Message.Chat.ID, update.Message.From.ID)
 	default:
 		b.reply(update.Message.Chat.ID, UNEXISTINGBUTTONPRESSED)
 	}
@@ -42,13 +44,26 @@ func (b *telegramBot) handleCallback(callback *tgbotapi.CallbackQuery) {
 
 func (b *telegramBot) sendStartMessage(chatID int64) {
 	contactButton := tgbotapi.NewKeyboardButtonContact(SENDCONTACTTEXT)
-	keyboard := tgbotapi.NewReplyKeyboard(tgbotapi.NewKeyboardButtonRow(contactButton))
-	keyboard.OneTimeKeyboard = true
-	keyboard.ResizeKeyboard = true
+
+	inlineBtn := tgbotapi.NewInlineKeyboardButtonData(MYSUBSCRIPTIONTEXT, "mysubscription")
+	inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(inlineBtn),
+	)
+
+	replyKeyboard := tgbotapi.NewReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(contactButton),
+	)
+	replyKeyboard.OneTimeKeyboard = true
+	replyKeyboard.ResizeKeyboard = true
 
 	msg := tgbotapi.NewMessage(chatID, STARTGREETINGTEXT)
-	msg.ReplyMarkup = keyboard
+	msg.ReplyMarkup = replyKeyboard
 	b.sendMessage(msg)
+
+	// Отправляем вторым сообщением кнопку подписки
+	btnMsg := tgbotapi.NewMessage(chatID, "Ваши действия:")
+	btnMsg.ReplyMarkup = inlineKeyboard
+	b.sendMessage(btnMsg)
 }
 
 func (b *telegramBot) sendPostRegistrationKeyboard(chatID int64) {
@@ -135,4 +150,30 @@ func (b *telegramBot) handleReceiptDocument(update tgbotapi.Update) {
 	}
 
 	b.reply(chatID, "Файл успешно сохранён. Спасибо!")
+}
+
+func (b *telegramBot) sendMySubscription(chatID, tgID int64) {
+	ctx := context.Background()
+
+	user, err := b.service.GetUserByTGID(ctx, tgID)
+	if err != nil || user == nil {
+		b.reply(chatID, "Не удалось найти пользователя.")
+		return
+	}
+
+	sub, err := b.service.GetActiveSubscription(ctx, user.ID)
+	if err != nil || sub == nil {
+		b.reply(chatID, "У вас пока нет активной подписки.")
+		return
+	}
+
+	msg := fmt.Sprintf(
+		"Ваша подписка:\nНачало: %s\nОкончание: %s\nОсталось чашек: %d из %d",
+		sub.StartDate.Format("02.01.2006"),
+		sub.EndDate.Format("02.01.2006"),
+		sub.RemainingCups,
+		sub.TotalCups,
+	)
+
+	b.reply(chatID, msg)
 }
