@@ -118,7 +118,8 @@ func (b *telegramBot) handleReceiptDocument(update tgbotapi.Update) {
 	}
 
 	url := file.Link(b.tg.Token)
-	filePath := fmt.Sprintf("./receipts/%d_%s", tgID, doc.FileName)
+	fileName := fmt.Sprintf("%d_%s", tgID, doc.FileName)
+	filePath := fmt.Sprintf("./receipts/%s", fileName)
 
 	out, err := os.Create(filePath)
 	if err != nil {
@@ -143,7 +144,7 @@ func (b *telegramBot) handleReceiptDocument(update tgbotapi.Update) {
 	}
 
 	// Сохраняем в базу, используя внутренний user.ID
-	if err := b.service.CreateReceipt(context.Background(), user.ID, filePath); err != nil {
+	if err := b.service.CreateReceipt(context.Background(), user.ID, fileName); err != nil {
 		b.reply(chatID, "Не удалось сохранить информацию о чеке.")
 		b.log.Errorf("failed to save receipt: %v", err)
 		return
