@@ -7,7 +7,7 @@ const (
 	SENDRECEIPTTEXT = "Отправка чека об оплате"
 )
 
-// Pressed Button Texts
+// After buttons texts
 const (
 	UNEXISTINGBUTTONPRESSED = "Неизвестная команда. Пожалуйста, используйте доступные кнопки."
 	STARTGREETINGTEXT       = "Добро пожаловать в OneCoffee! Пожалуйста, отправьте ваше имя и номер телефона."
