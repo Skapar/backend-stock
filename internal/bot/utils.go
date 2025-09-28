@@ -12,3 +12,9 @@ func (b *telegramBot) reply(chatID int64, text string) {
 	}
 	b.log.Infof("Sent message to %d: %s", chatID, send.Text)
 }
+
+func (b *telegramBot) sendMessage(msg tgbotapi.MessageConfig) {
+	if _, err := b.tg.Send(msg); err != nil {
+		b.log.Errorf("failed to send message: %v", err)
+	}
+}

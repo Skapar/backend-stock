@@ -2,7 +2,7 @@ package bot
 
 // Button Names
 const (
-	STARTBUTTONNAME = "Start"
+	STARTBUTTONNAME = "start"
 )
 
 // Pressed Button Texts
