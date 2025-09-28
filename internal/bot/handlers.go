@@ -15,10 +15,8 @@ func (b *telegramBot) handleUpdate(update tgbotapi.Update) {
 	}
 
 	if update.Message.IsCommand() {
-		if update.Message.IsCommand() {
-			b.handleCommand(update)
-			return
-		}
+		b.handleCommand(update)
+		return
 	}
 }
 
