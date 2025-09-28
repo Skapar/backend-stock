@@ -5,6 +5,11 @@ import (
 )
 
 func (b *telegramBot) handleUpdate(update tgbotapi.Update) {
+	if update.CallbackQuery != nil {
+		b.handleCallback(update.CallbackQuery)
+		return
+	}
+	
 	if update.Message == nil {
 		return
 	}

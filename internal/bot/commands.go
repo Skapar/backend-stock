@@ -6,10 +6,38 @@ import (
 
 func (b *telegramBot) handleCommand(update tgbotapi.Update) {
 	switch update.Message.Command() {
-	case STARTBUTTONNAME:
+	case STARTBUTTON:
 		b.sendStartMessage(update.Message.Chat.ID)
+	case GETPAYMENTDETAILSBUTTON:
+		b.sendPaymentDetails(update.Message.Chat.ID)
+	case ASKRECEIPTBUTTON:
+		b.askForReceipt(update.Message.Chat.ID)
 	default:
-		b.reply(update.Message.Chat.ID, UNEXISTINGBUTTONPRESSED)
+		err := b.reply(update.Message.Chat.ID, UNEXISTINGBUTTONPRESSED)
+		if err != nil {
+			b.log.Errorf("failed to send unexisting button message: %v", err)
+		}
+	}
+}
+
+func (b *telegramBot) handleCallback(callback *tgbotapi.CallbackQuery) {
+	chatID := callback.Message.Chat.ID
+
+	switch callback.Data {
+	case GETPAYMENTDETAILSBUTTON:
+		b.sendPaymentDetails(chatID)
+	case ASKRECEIPTBUTTON:
+		b.askForReceipt(chatID)
+	default:
+		b.reply(chatID, UNEXISTINGBUTTONPRESSED)
+	}
+
+	resp, err := b.tg.Request(tgbotapi.NewCallback(callback.ID, ""))
+	if err != nil {
+		b.log.Errorf("failed to answer callback query: %v", err)
+	}
+	if !resp.Ok {
+		b.log.Errorf("callback query response error: %v", resp.Description)
 	}
 }
 
@@ -25,16 +53,30 @@ func (b *telegramBot) sendStartMessage(chatID int64) {
 }
 
 func (b *telegramBot) sendPostRegistrationKeyboard(chatID int64) {
-	getPaymentBtn := tgbotapi.NewKeyboardButton(GETPAYMENTTEXT)
-	sendReceiptBtn := tgbotapi.NewKeyboardButton(SENDRECEIPTTEXT)
-	keyboard := tgbotapi.NewReplyKeyboard(
-		tgbotapi.NewKeyboardButtonRow(getPaymentBtn),
-		tgbotapi.NewKeyboardButtonRow(sendReceiptBtn),
-	)
-	keyboard.ResizeKeyboard = true
-	keyboard.OneTimeKeyboard = false
+	getPaymentBtn := tgbotapi.NewInlineKeyboardButtonData(GETPAYMENTDETAILSBUTTONTEXT, GETPAYMENTDETAILSBUTTON)
+	sendReceiptBtn := tgbotapi.NewInlineKeyboardButtonData(ASKRECEIPTBUTTONTEXT, ASKRECEIPTBUTTON)
 
-	msg := tgbotapi.NewMessage(chatID, "Выберите действие:")
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(getPaymentBtn),
+		tgbotapi.NewInlineKeyboardRow(sendReceiptBtn),
+	)
+
+	msg := tgbotapi.NewMessage(chatID, POSTREGISTRATIONTEXT)
 	msg.ReplyMarkup = keyboard
+
 	b.sendMessage(msg)
+}
+
+func (b *telegramBot) sendPaymentDetails(chatID int64) {
+	err := b.reply(chatID, PAYMENTDETAILSTEXT)
+	if err != nil {
+		b.log.Errorf("failed to send payment details: %v", err)
+	}
+}
+
+func (b *telegramBot) askForReceipt(chatID int64) {
+	err := b.reply(chatID, ASKRECEIPTTEXT)
+	if err != nil {
+		b.log.Errorf("failed to ask for receipt: %v", err)
+	}
 }
