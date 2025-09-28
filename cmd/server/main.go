@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -115,6 +116,15 @@ func main() {
 	})
 
 	wrk.Start()
+
+	fs := http.FileServer(http.Dir("./receipts"))
+	http.Handle("/files/", http.StripPrefix("/files/", fs))
+
+	log.Infof("HTTP server started on %s", ":8080")
+	err = http.ListenAndServe(":8080", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
