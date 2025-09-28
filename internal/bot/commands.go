@@ -8,10 +8,6 @@ func (b *telegramBot) handleCommand(update tgbotapi.Update) {
 	switch update.Message.Command() {
 	case STARTBUTTON:
 		b.sendStartMessage(update.Message.Chat.ID)
-	case GETPAYMENTDETAILSBUTTON:
-		b.sendPaymentDetails(update.Message.Chat.ID)
-	case ASKRECEIPTBUTTON:
-		b.askForReceipt(update.Message.Chat.ID)
 	default:
 		err := b.reply(update.Message.Chat.ID, UNEXISTINGBUTTONPRESSED)
 		if err != nil {
@@ -29,7 +25,10 @@ func (b *telegramBot) handleCallback(callback *tgbotapi.CallbackQuery) {
 	case ASKRECEIPTBUTTON:
 		b.askForReceipt(chatID)
 	default:
-		b.reply(chatID, UNEXISTINGBUTTONPRESSED)
+		err := b.reply(chatID, UNEXISTINGBUTTONPRESSED)
+		if err != nil {
+			b.log.Errorf("failed to send unexisting button message: %v", err)
+		}
 	}
 
 	resp, err := b.tg.Request(tgbotapi.NewCallback(callback.ID, ""))
