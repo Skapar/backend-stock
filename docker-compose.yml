@@ -17,6 +17,8 @@ services:
     environment:
       - POSTGRES_ADDR=${POSTGRES_ADDR}
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+    ports:
+      - "8080:8080"
   db:
     image: postgres:16-alpine3.19
     restart: unless-stopped
