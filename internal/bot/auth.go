@@ -11,7 +11,7 @@ import (
 func (b *telegramBot) handleRegisterUser(tgUserID int64, username, name, phone string) error {
 	user := &entities.User{
 		TGID:     tgUserID,
-		Username: username,
+		Nickname: username,
 		Name:     name,
 		Phone:    phone,
 	}

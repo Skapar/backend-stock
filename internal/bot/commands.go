@@ -1,6 +1,12 @@
 package bot
 
 import (
+	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -9,10 +15,7 @@ func (b *telegramBot) handleCommand(update tgbotapi.Update) {
 	case STARTBUTTON:
 		b.sendStartMessage(update.Message.Chat.ID)
 	default:
-		err := b.reply(update.Message.Chat.ID, UNEXISTINGBUTTONPRESSED)
-		if err != nil {
-			b.log.Errorf("failed to send unexisting button message: %v", err)
-		}
+		b.reply(update.Message.Chat.ID, UNEXISTINGBUTTONPRESSED)
 	}
 }
 
@@ -25,10 +28,7 @@ func (b *telegramBot) handleCallback(callback *tgbotapi.CallbackQuery) {
 	case ASKRECEIPTBUTTON:
 		b.askForReceipt(chatID)
 	default:
-		err := b.reply(chatID, UNEXISTINGBUTTONPRESSED)
-		if err != nil {
-			b.log.Errorf("failed to send unexisting button message: %v", err)
-		}
+		b.reply(chatID, UNEXISTINGBUTTONPRESSED)
 	}
 
 	resp, err := b.tg.Request(tgbotapi.NewCallback(callback.ID, ""))
@@ -67,15 +67,72 @@ func (b *telegramBot) sendPostRegistrationKeyboard(chatID int64) {
 }
 
 func (b *telegramBot) sendPaymentDetails(chatID int64) {
-	err := b.reply(chatID, PAYMENTDETAILSTEXT)
-	if err != nil {
-		b.log.Errorf("failed to send payment details: %v", err)
-	}
+	b.reply(chatID, PAYMENTDETAILSTEXT)
 }
 
 func (b *telegramBot) askForReceipt(chatID int64) {
-	err := b.reply(chatID, ASKRECEIPTTEXT)
-	if err != nil {
-		b.log.Errorf("failed to ask for receipt: %v", err)
+	b.reply(chatID, ASKRECEIPTTEXT)
+}
+
+func (b *telegramBot) handleReceiptDocument(update tgbotapi.Update) {
+	chatID := update.Message.Chat.ID
+	tgID := update.Message.From.ID
+	doc := update.Message.Document
+
+	user, err := b.service.GetUserByTGID(context.Background(), tgID)
+	if err != nil || user == nil {
+		b.reply(chatID, "Не удалось найти пользователя в системе.")
+		b.log.Errorf("user not found for tgID %d: %v", tgID, err)
+		return
 	}
+
+	// Создаём директорию, если нет
+	if err := os.MkdirAll("./receipts", os.ModePerm); err != nil {
+		b.reply(chatID, "Не удалось создать директорию для файлов.")
+		b.log.Errorf("failed to create receipts dir: %v", err)
+		return
+	}
+
+	// Скачиваем файл
+	fileID := doc.FileID
+	file, err := b.tg.GetFile(tgbotapi.FileConfig{FileID: fileID})
+	if err != nil {
+		b.reply(chatID, "Не удалось получить файл. Попробуйте снова.")
+		b.log.Errorf("failed to get file: %v", err)
+		return
+	}
+
+	url := file.Link(b.tg.Token)
+	filePath := fmt.Sprintf("./receipts/%d_%s", tgID, doc.FileName)
+
+	out, err := os.Create(filePath)
+	if err != nil {
+		b.reply(chatID, "Не удалось создать файл для сохранения.")
+		b.log.Errorf("failed to create file: %v", err)
+		return
+	}
+	defer out.Close()
+
+	resp, err := http.Get(url)
+	if err != nil {
+		b.reply(chatID, "Не удалось скачать файл.")
+		b.log.Errorf("failed to download file: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if _, err := io.Copy(out, resp.Body); err != nil {
+		b.reply(chatID, "Не удалось сохранить файл.")
+		b.log.Errorf("failed to copy file: %v", err)
+		return
+	}
+
+	// Сохраняем в базу, используя внутренний user.ID
+	if err := b.service.CreateReceipt(context.Background(), user.ID, filePath); err != nil {
+		b.reply(chatID, "Не удалось сохранить информацию о чеке.")
+		b.log.Errorf("failed to save receipt: %v", err)
+		return
+	}
+
+	b.reply(chatID, "Файл успешно сохранён. Спасибо!")
 }

@@ -41,3 +41,17 @@ func (s *service) CreateOrUpdateUser(ctx context.Context, user *entities.User) e
 	}
 	return nil
 }
+
+func (s *service) GetUserByTGID(ctx context.Context, tgID int64) (*entities.User, error) {
+	return s.pgRepository.GetUserByTGID(ctx, tgID)
+}
+
+func (s *service) CreateReceipt(ctx context.Context, userID int64, filePath string) error {
+	receipt := &entities.Receipt{
+		UserID:   userID,
+		FilePath: filePath,
+		Status:   entities.StatusPending,
+	}
+
+	return s.pgRepository.CreateReceipt(ctx, receipt)
+}

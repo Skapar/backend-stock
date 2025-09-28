@@ -9,8 +9,13 @@ func (b *telegramBot) handleUpdate(update tgbotapi.Update) {
 		b.handleCallback(update.CallbackQuery)
 		return
 	}
-	
+
 	if update.Message == nil {
+		return
+	}
+
+	if update.Message.Document != nil {
+		b.handleReceiptDocument(update)
 		return
 	}
 
