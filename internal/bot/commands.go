@@ -150,7 +150,7 @@ func (b *telegramBot) handleReceiptDocument(update tgbotapi.Update) {
 		return
 	}
 
-	b.reply(chatID, "Файл успешно сохранён. Спасибо!")
+	b.reply(chatID, "Спасибо! Файл сохранён и отправлен на рассмотрение.")
 }
 
 func (b *telegramBot) sendMySubscription(chatID, tgID int64) {
