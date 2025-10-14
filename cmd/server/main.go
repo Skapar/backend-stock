@@ -10,18 +10,18 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Skapar/backend-go/internal/repository"
+	"github.com/Skapar/backend-go/internal/service"
+	"github.com/Skapar/backend-go/internal/worker"
+	"github.com/Skapar/backend-go/pkg/cache"
+	"github.com/Skapar/backend-go/pkg/database"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"github.com/onec-tech/bot/internal/repository"
-	"github.com/onec-tech/bot/internal/service"
-	"github.com/onec-tech/bot/internal/worker"
-	"github.com/onec-tech/bot/pkg/cache"
-	"github.com/onec-tech/bot/pkg/database"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/onec-tech/bot/config"
+	"github.com/Skapar/backend-go/config"
 )
 
 func main() {

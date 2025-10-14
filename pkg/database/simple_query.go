@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/onec-tech/bot/pkg/logger"
+	"github.com/Skapar/backend-go/pkg/logger"
 
+	cache "github.com/Skapar/backend-go/pkg/cache"
 	"github.com/georgysavva/scany/pgxscan"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	cache "github.com/onec-tech/bot/pkg/cache"
 )
 
 // Database is IDatabase implementation

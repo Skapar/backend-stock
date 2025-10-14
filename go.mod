@@ -1,4 +1,4 @@
-module github.com/onec-tech/bot
+module github.com/Skapar/backend-go
 
 go 1.24.3
 

@@ -3,11 +3,11 @@ package service
 import (
 	"context"
 
-	"github.com/onec-tech/bot/config"
-	"github.com/onec-tech/bot/internal/models/entities"
-	"github.com/onec-tech/bot/internal/repository"
-	"github.com/onec-tech/bot/pkg/cache"
-	"github.com/onec-tech/bot/pkg/logger"
+	"github.com/Skapar/backend-go/config"
+	"github.com/Skapar/backend-go/internal/models/entities"
+	"github.com/Skapar/backend-go/internal/repository"
+	"github.com/Skapar/backend-go/pkg/cache"
+	"github.com/Skapar/backend-go/pkg/logger"
 )
 
 type service struct {

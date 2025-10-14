@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Skapar/backend-go/pkg/logger"
 	"github.com/go-redis/redis/v8"
-	"github.com/onec-tech/bot/pkg/logger"
 )
 
 type ICache interface {

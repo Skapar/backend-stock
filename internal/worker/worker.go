@@ -3,10 +3,10 @@ package worker
 import (
 	"time"
 
-	"github.com/onec-tech/bot/pkg/logger"
+	"github.com/Skapar/backend-go/pkg/logger"
 
+	"github.com/Skapar/backend-go/internal/service"
 	"github.com/go-co-op/gocron"
-	"github.com/onec-tech/bot/internal/service"
 )
 
 type worker struct {

@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 
-	"github.com/onec-tech/bot/pkg/logger"
+	"github.com/Skapar/backend-go/pkg/logger"
 
 	"github.com/georgysavva/scany/pgxscan"
 	"github.com/jackc/pgx/v4"

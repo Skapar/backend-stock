@@ -3,9 +3,9 @@ package repository
 import (
 	"context"
 
-	"github.com/onec-tech/bot/internal/models/entities"
-	"github.com/onec-tech/bot/pkg/database"
-	"github.com/onec-tech/bot/pkg/logger"
+	"github.com/Skapar/backend-go/internal/models/entities"
+	"github.com/Skapar/backend-go/pkg/database"
+	"github.com/Skapar/backend-go/pkg/logger"
 )
 
 type pgRepository struct {

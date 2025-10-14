@@ -10,8 +10,6 @@ import (
 type Config struct {
 	ListenHttpPort int    `envconfig:"PORT" default:"8080"`
 	PostgresAddr   string `envconfig:"POSTGRES_ADDR" default:""`
-
-	MaxWorkers int `envconfig:"MAX_WORKERS" default:"10"`
 }
 
 // New Config constructor.
