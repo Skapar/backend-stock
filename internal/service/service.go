@@ -15,7 +15,6 @@ type service struct {
 	cache        cache.ICache
 	log          logger.Logger
 	config       *config.Config
-	notifier     Notifier
 }
 
 type SConfig struct {
@@ -23,7 +22,6 @@ type SConfig struct {
 	Cache        cache.ICache
 	Log          logger.Logger
 	Config       *config.Config
-	Notifier     Notifier
 }
 
 func NewService(cfg *SConfig) (Service, error) {
@@ -32,7 +30,6 @@ func NewService(cfg *SConfig) (Service, error) {
 		cache:        cfg.Cache,
 		log:          cfg.Log,
 		config:       cfg.Config,
-		notifier:     cfg.Notifier,
 	}, nil
 }
 
@@ -43,65 +40,4 @@ func (s *service) CreateOrUpdateUser(ctx context.Context, user *entities.User) e
 		return err
 	}
 	return nil
-}
-
-func (s *service) GetUserByTGID(ctx context.Context, tgID int64) (*entities.User, error) {
-	return s.pgRepository.GetUserByTGID(ctx, tgID)
-}
-
-func (s *service) CreateReceipt(ctx context.Context, userID int64, filePath string) error {
-	receipt := &entities.Receipt{
-		UserID:   userID,
-		FilePath: filePath,
-		Status:   entities.StatusPending,
-	}
-
-	return s.pgRepository.CreateReceipt(ctx, receipt)
-}
-
-func (s *service) ProcessApprovedReceipts(ctx context.Context) error {
-	receipts, err := s.pgRepository.GetReceiptsByStatus(ctx, entities.StatusApproved)
-	if err != nil {
-		s.log.Errorf("failed to get approved receipts: %v", err)
-		return err
-	}
-
-	for _, r := range receipts {
-		err := s.pgRepository.UpdateReceiptStatus(ctx, entities.StatusConfirmed, r.ID)
-		if err != nil {
-			s.log.Errorf("failed to confirm receipt %d: %v", r.ID, err)
-			return err
-		}
-
-		sub, err := s.pgRepository.GetDefaultSubscription(ctx)
-		if err != nil {
-			s.log.Errorf("failed to get subscription for user %d: %v", r.UserID, err)
-			return err
-		}
-
-		userSubID, err := s.pgRepository.CreateUserSubscription(ctx, r.UserID, sub)
-		if err != nil {
-			s.log.Errorf("failed to create user subscription for user %d: %v", r.UserID, err)
-			return err
-		}
-
-		err = s.pgRepository.CreatePayment(ctx, r.UserID, userSubID, sub.Price)
-		if err != nil {
-			s.log.Errorf("failed to create payment for user %d: %v", r.UserID, err)
-			return err
-		}
-
-		if s.notifier != nil {
-			err = s.notifier.Notify(ctx, r.TgID, "Ваша подписка подтверждена!")
-			if err != nil {
-				s.log.Errorf("failed to notify user %d: %v", r.UserID, err)
-			}
-		}
-	}
-
-	return nil
-}
-
-func (s *service) GetActiveSubscription(ctx context.Context, userID int64) (*entities.UserSubscription, error) {
-	return s.pgRepository.GetActiveSubscription(ctx, userID)
 }

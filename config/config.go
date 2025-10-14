@@ -11,9 +11,6 @@ type Config struct {
 	ListenHttpPort int    `envconfig:"PORT" default:"8080"`
 	PostgresAddr   string `envconfig:"POSTGRES_ADDR" default:""`
 
-	TelegramToken string `envconfig:"TELEGRAM_TOKEN" default:""`
-	TelegramDebug bool   `envconfig:"TELEGRAM_DEBUG" default:"false"`
-
 	MaxWorkers int `envconfig:"MAX_WORKERS" default:"10"`
 }
 

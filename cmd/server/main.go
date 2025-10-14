@@ -13,7 +13,6 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"github.com/onec-tech/bot/internal/bot"
 	"github.com/onec-tech/bot/internal/repository"
 	"github.com/onec-tech/bot/internal/service"
 	"github.com/onec-tech/bot/internal/worker"
@@ -80,20 +79,9 @@ func main() {
 		Cache:        cacheImpl,
 		Log:          log,
 		Config:       cfg,
-		Notifier:     nil,
 	})
 	if err != nil {
 		log.Fatalf("failed to init service: %v", err)
-	}
-
-	// Telegram Bot init
-	tgBot, err := bot.NewBot(&bot.BotConfig{
-		Service: srv,
-		Log:     log,
-		Config:  cfg,
-	})
-	if err != nil {
-		log.Fatalf("failed to init telegram bot: %v", err)
 	}
 
 	srv, err = service.NewService(&service.SConfig{
@@ -101,18 +89,10 @@ func main() {
 		Cache:        cacheImpl,
 		Log:          log,
 		Config:       cfg,
-		Notifier:     tgBot, // бот умеет Notify()
 	})
 	if err != nil {
 		log.Fatalf("failed to re-init service with notifier: %v", err)
 	}
-
-	// Start Telegram Bot
-	go func() {
-		if err := tgBot.Start(context.Background()); err != nil {
-			log.Errorf("telegram bot error: %v", err)
-		}
-	}()
 
 	wrk := worker.NewWorker(&worker.WorkerConfig{
 		Service: srv,
