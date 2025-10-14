@@ -3,9 +3,9 @@ package worker
 import (
 	"time"
 
-	"github.com/Skapar/backend-go/pkg/logger"
+	"github.com/Skapar/backend/pkg/logger"
 
-	"github.com/Skapar/backend-go/internal/service"
+	"github.com/Skapar/backend/internal/service"
 	"github.com/go-co-op/gocron"
 )
 

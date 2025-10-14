@@ -3,11 +3,11 @@ package service
 import (
 	"context"
 
-	"github.com/Skapar/backend-go/config"
-	"github.com/Skapar/backend-go/internal/models/entities"
-	"github.com/Skapar/backend-go/internal/repository"
-	"github.com/Skapar/backend-go/pkg/cache"
-	"github.com/Skapar/backend-go/pkg/logger"
+	"github.com/Skapar/backend/config"
+	"github.com/Skapar/backend/internal/models/entities"
+	"github.com/Skapar/backend/internal/repository"
+	"github.com/Skapar/backend/pkg/cache"
+	"github.com/Skapar/backend/pkg/logger"
 )
 
 type service struct {

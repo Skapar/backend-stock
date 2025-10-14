@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Skapar/backend-go/pkg/logger"
+	"github.com/Skapar/backend/pkg/logger"
 	"github.com/go-redis/redis/v8"
 )
 

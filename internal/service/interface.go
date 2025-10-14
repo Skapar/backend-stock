@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/Skapar/backend-go/internal/models/entities"
+	"github.com/Skapar/backend/internal/models/entities"
 )
 
 type Service interface {

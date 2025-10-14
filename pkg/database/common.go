@@ -3,8 +3,8 @@ package database
 import (
 	"context"
 	"errors"
-	"github.com/Skapar/backend-go/pkg/cache"
-	"github.com/Skapar/backend-go/pkg/logger"
+	"github.com/Skapar/backend/pkg/cache"
+	"github.com/Skapar/backend/pkg/logger"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/kelseyhightower/envconfig"

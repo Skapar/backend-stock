@@ -1,4 +1,4 @@
-module github.com/Skapar/backend-go
+module github.com/Skapar/backend
 
 go 1.24.3
 
