@@ -7,8 +7,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    volumes:
-      - ./receipts:/app/receipts
     restart: always
     networks:
       - backend_network
@@ -16,7 +14,6 @@ services:
       - db
     environment:
       - POSTGRES_ADDR=${POSTGRES_ADDR}
-      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
     ports:
       - "8080:8080"
   db:
