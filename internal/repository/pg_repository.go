@@ -6,6 +6,7 @@ import (
 	"github.com/Skapar/backend/internal/models/entities"
 	"github.com/Skapar/backend/pkg/database"
 	"github.com/Skapar/backend/pkg/logger"
+	"github.com/pkg/errors"
 )
 
 type pgRepository struct {
@@ -20,17 +21,69 @@ func NewPGRepository(db database.IDatabase, log logger.Logger) PGRepository {
 	}
 }
 
-func (r *pgRepository) CreateOrUpdateUser(ctx context.Context, user *entities.User) error {
+func (r *pgRepository) CreateUser(ctx context.Context, user *entities.User) (int64, error) {
 	q := `
-	INSERT INTO onec_user (tg_id, nickname, name, phone)
-	VALUES ($1, $2, $3, $4)
-	ON CONFLICT (tg_id) 
-	DO UPDATE SET
-		nickname = EXCLUDED.nickname,
-		name = EXCLUDED.name,
-		phone = EXCLUDED.phone
-	RETURNING id;
+		INSERT INTO stock_user (email, password, role, balance)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id;
 	`
 
-	return r.DB.Insert(ctx, user, q, user.TGID, user.Nickname, user.Name, user.Phone)
+	var id int64
+	if err := r.DB.Insert(ctx, &id, q, user.Email, user.Password, user.Role, user.Balance); err != nil {
+		return 0, errors.Wrap(err, "CreateUser: failed to create user")
+	}
+
+	return id, nil
+}
+
+func (r *pgRepository) GetUserByID(ctx context.Context, id int64) (*entities.User, error) {
+	q := `
+		SELECT id, email, password, role, balance, created_at
+		FROM stock_user
+		WHERE id = $1;
+	`
+
+	var user entities.User
+	if err := r.DB.Get(ctx, &user, q, id); err != nil {
+		return nil, errors.Wrap(err, "GetUserByID: failed to get user")
+	}
+	return &user, nil
+}
+
+func (r *pgRepository) UpdateUser(ctx context.Context, user *entities.User) error {
+	q := `
+		UPDATE stock_user
+		SET email = $1,
+			password = $2,
+			role = $3,
+			balance = $4
+		WHERE id = $5;
+	`
+
+	if err := r.DB.Update(ctx, q, user.Email, user.Password, user.Role, user.Balance, user.ID); err != nil {
+		return errors.Wrap(err, "UpdateUser: failed to update user")
+	}
+	return nil
+}
+
+func (r *pgRepository) DeleteUser(ctx context.Context, id int64) error {
+	q := `DELETE FROM stock_user WHERE id = $1;`
+	if err := r.DB.Delete(ctx, nil, q, id); err != nil {
+		return errors.Wrapf(err, "DeleteUser: failed to delete user")
+	}
+	return nil
+}
+
+func (r *pgRepository) GetAllUsers(ctx context.Context) ([]*entities.User, error) {
+	q := `
+		SELECT id, email, password, role, balance, created_at
+		FROM stock_user
+		ORDER BY id DESC;
+	`
+
+	var users []*entities.User
+	if err := r.DB.Get(ctx, &users, q); err != nil {
+		return nil, errors.Wrap(err, "GetAllUsers: failed to get all users")
+	}
+	return users, nil
 }

@@ -8,5 +8,9 @@ import (
 
 type PGRepository interface {
 	// User
-	CreateOrUpdateUser(ctx context.Context, user *entities.User) error
+	CreateUser(ctx context.Context, user *entities.User) (int64, error)
+	GetUserByID(ctx context.Context, id int64) (*entities.User, error)
+	UpdateUser(ctx context.Context, user *entities.User) error
+	DeleteUser(ctx context.Context, id int64) error
+	GetAllUsers(ctx context.Context) ([]*entities.User, error)
 }

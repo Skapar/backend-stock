@@ -1,9 +1,8 @@
 package main
 
 import (
-	"context"
-	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,15 +10,19 @@ import (
 	"time"
 
 	"github.com/Skapar/backend/internal/repository"
+	"github.com/Skapar/backend/internal/server"
 	"github.com/Skapar/backend/internal/service"
 	"github.com/Skapar/backend/internal/worker"
 	"github.com/Skapar/backend/pkg/cache"
 	"github.com/Skapar/backend/pkg/database"
+	stock "github.com/Skapar/backend/proto"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"google.golang.org/grpc"
 
 	"github.com/Skapar/backend/config"
 )
@@ -128,25 +131,50 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	// Static files (замена http.FileServer)
-	router.Static("/files", "./receipts")
+	//// HTTP server
+	//httpServer := &http.Server{
+	//	Addr:         fmt.Sprintf("0.0.0.0:%d", cfg.ListenHttpPort),
+	//	Handler:      router,
+	//	ReadTimeout:  10 * time.Second,
+	//	WriteTimeout: 20 * time.Second,
+	//	IdleTimeout:  60 * time.Second,
+	//}
+	//
+	//// Run server
+	//go func() {
+	//	log.Infof("HTTP server started on %s", httpServer.Addr)
+	//	if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	//		log.Fatalf("server error: %v", err)
+	//	}
+	//}()
 
-	// HTTP server
-	httpServer := &http.Server{
-		Addr:         fmt.Sprintf("0.0.0.0:%d", cfg.ListenHttpPort),
-		Handler:      router,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 20 * time.Second,
-		IdleTimeout:  60 * time.Second,
+	// GRPC
+	addr := fmt.Sprintf("0.0.0.0:%d", cfg.ListenGRPCPort)
+
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("failed to listen: %s", err))
 	}
 
-	// Run server
+	s := grpc.NewServer(
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+			server.MiddlewareLoggingStream(zlogger),
+		)),
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			server.MiddlewareLoggingUnary(zlogger),
+		)),
+	)
+
+	grpcServer := server.New(srv)
+	stock.RegisterStockServiceServer(s, grpcServer)
+
 	go func() {
-		log.Infof("HTTP server started on %s", httpServer.Addr)
-		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("server error: %v", err)
+		if err := s.Serve(l); err != nil {
+			panic(fmt.Sprintf("failed to serve: %s", err))
 		}
 	}()
+
+	log.Infof("Listening on port grpc: %v", addr)
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
@@ -155,12 +183,12 @@ func main() {
 
 	log.Info("Shutting down server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+	//ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	//defer cancel()
 
-	if err := httpServer.Shutdown(ctx); err != nil {
-		log.Errorf("HTTP server forced to shutdown: %v", err)
-	}
+	//if err := httpServer.Shutdown(ctx); err != nil {
+	//	log.Errorf("HTTP server forced to shutdown: %v", err)
+	//}
 
 	wrk.Stop()
 	log.Info("Server exited properly")
