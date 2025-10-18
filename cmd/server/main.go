@@ -1,28 +1,27 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/Skapar/backend/internal/handler"
+	"github.com/Skapar/backend/internal/middleware"
 	"github.com/Skapar/backend/internal/repository"
-	"github.com/Skapar/backend/internal/server"
 	"github.com/Skapar/backend/internal/service"
 	"github.com/Skapar/backend/internal/worker"
 	"github.com/Skapar/backend/pkg/cache"
 	"github.com/Skapar/backend/pkg/database"
-	stock "github.com/Skapar/backend/proto"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"google.golang.org/grpc"
 
 	"github.com/Skapar/backend/config"
 )
@@ -87,15 +86,15 @@ func main() {
 		log.Fatalf("failed to init service: %v", err)
 	}
 
-	srv, err = service.NewService(&service.SConfig{
-		PGRepository: pgRepository,
-		Cache:        cacheImpl,
-		Log:          log,
-		Config:       cfg,
-	})
-	if err != nil {
-		log.Fatalf("failed to re-init service with notifier: %v", err)
-	}
+	// srv, err = service.NewService(&service.SConfig{
+	// 	PGRepository: pgRepository,
+	// 	Cache:        cacheImpl,
+	// 	Log:          log,
+	// 	Config:       cfg,
+	// })
+	// if err != nil {
+	// 	log.Fatalf("failed to re-init service with notifier: %v", err)
+	// }
 
 	wrk := worker.NewWorker(&worker.WorkerConfig{
 		Service: srv,
@@ -126,55 +125,98 @@ func main() {
 	}
 	router.Use(cors.New(corsConfig))
 
+	router.Use(func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+
+		duration := time.Since(start)
+		status := c.Writer.Status()
+		log.Infow("HTTP Request",
+			"method", c.Request.Method,
+			"path", c.Request.URL.Path,
+			"status", status,
+			"latency", duration.String(),
+			"client_ip", c.ClientIP(),
+			"user_agent", c.Request.UserAgent(),
+			"error", c.Errors.ByType(gin.ErrorTypePrivate).String(),
+		)
+	})
+
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	//// HTTP server
-	//httpServer := &http.Server{
-	//	Addr:         fmt.Sprintf("0.0.0.0:%d", cfg.ListenHttpPort),
-	//	Handler:      router,
-	//	ReadTimeout:  10 * time.Second,
-	//	WriteTimeout: 20 * time.Second,
-	//	IdleTimeout:  60 * time.Second,
-	//}
-	//
-	//// Run server
-	//go func() {
-	//	log.Infof("HTTP server started on %s", httpServer.Addr)
-	//	if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-	//		log.Fatalf("server error: %v", err)
-	//	}
-	//}()
+	authHandler := handler.NewAuthHandler(srv, cfg)
+	userHandler := handler.NewUserHandler(srv)
 
-	// GRPC
-	addr := fmt.Sprintf("0.0.0.0:%d", cfg.ListenGRPCPort)
+	api := router.Group("/api")
+	{
+		api.POST("/register", authHandler.Register)
+		api.POST("/login", authHandler.Login)
 
-	l, err := net.Listen("tcp", addr)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("failed to listen: %s", err))
+		protected := api.Group("/users")
+		protected.Use(middleware.AuthMiddleware(cfg, "ADMIN"))
+		{
+			protected.GET("/all", func(c *gin.Context) {
+				users, err := srv.GetAllUsers(c)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+				c.JSON(http.StatusOK, users)
+			})
+
+			protected.GET("/:id", userHandler.GetUserByID)
+			protected.PUT("/:id", userHandler.UpdateUser)
+			protected.DELETE("/:id", userHandler.DeleteUser)
+		}
 	}
 
-	s := grpc.NewServer(
-		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
-			server.MiddlewareLoggingStream(zlogger),
-		)),
-		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-			server.MiddlewareLoggingUnary(zlogger),
-		)),
-	)
+	//// HTTP server
+	httpServer := &http.Server{
+		Addr:         fmt.Sprintf("0.0.0.0:%d", cfg.ListenHttpPort),
+		Handler:      router,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 20 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
 
-	grpcServer := server.New(srv)
-	stock.RegisterStockServiceServer(s, grpcServer)
-
+	// Run server
 	go func() {
-		if err := s.Serve(l); err != nil {
-			panic(fmt.Sprintf("failed to serve: %s", err))
+		log.Infof("HTTP server started on %s", httpServer.Addr)
+		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("server error: %v", err)
 		}
 	}()
 
-	log.Infof("Listening on port grpc: %v", addr)
+	// GRPC
+	// addr := fmt.Sprintf("0.0.0.0:%d", cfg.ListenGRPCPort)
+
+	// l, err := net.Listen("tcp", addr)
+	// if err != nil {
+	// 	log.Fatal(fmt.Sprintf("failed to listen: %s", err))
+	// }
+
+	// s := grpc.NewServer(
+	// 	grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+	// 		server.MiddlewareLoggingStream(zlogger),
+	// 	)),
+	// 	grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+	// 		server.MiddlewareLoggingUnary(zlogger),
+	// 	)),
+	// )
+
+	// grpcServer := server.New(srv)
+	// stock.RegisterStockServiceServer(s, grpcServer)
+
+	// go func() {
+	// 	if err := s.Serve(l); err != nil {
+	// 		panic(fmt.Sprintf("failed to serve: %s", err))
+	// 	}
+	// }()
+
+	// log.Infof("Listening on port grpc: %v", addr)
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
@@ -183,12 +225,12 @@ func main() {
 
 	log.Info("Shutting down server...")
 
-	//ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	//defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
 
-	//if err := httpServer.Shutdown(ctx); err != nil {
-	//	log.Errorf("HTTP server forced to shutdown: %v", err)
-	//}
+	if err := httpServer.Shutdown(ctx); err != nil {
+		log.Errorf("HTTP server forced to shutdown: %v", err)
+	}
 
 	wrk.Stop()
 	log.Info("Server exited properly")

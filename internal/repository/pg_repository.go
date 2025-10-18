@@ -50,6 +50,20 @@ func (r *pgRepository) GetUserByID(ctx context.Context, id int64) (*entities.Use
 	return &user, nil
 }
 
+func (r *pgRepository) GetUserByEmail(ctx context.Context, email string) (*entities.User, error) {
+	q := `
+		SELECT id, email, password, role, balance, created_at
+		FROM stock_user
+		WHERE email = $1;
+	`
+
+	var user entities.User
+	if err := r.DB.Get(ctx, &user, q, email); err != nil {
+		return nil, errors.Wrap(err, "GetUserByEmail: failed to get user")
+	}
+	return &user, nil
+}
+
 func (r *pgRepository) UpdateUser(ctx context.Context, user *entities.User) error {
 	q := `
 		UPDATE stock_user

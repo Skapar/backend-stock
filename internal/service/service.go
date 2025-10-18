@@ -8,7 +8,6 @@ import (
 	"github.com/Skapar/backend/internal/repository"
 	"github.com/Skapar/backend/pkg/cache"
 	"github.com/Skapar/backend/pkg/logger"
-	stock "github.com/Skapar/backend/proto"
 )
 
 type service struct {
@@ -34,48 +33,30 @@ func NewService(cfg *SConfig) (Service, error) {
 	}, nil
 }
 
-func (s *service) CreateUser(ctx context.Context, req *stock.CreateUserRequest) (int64, error) {
-	user := &entities.User{
-		Email:    req.Email,
-		Password: req.Password,
-		Role:     entities.RoleTrader,
-		Balance:  0,
-	}
-
+func (s *service) CreateUser(ctx context.Context, user *entities.User) (int64, error) {
 	id, err := s.pgRepository.CreateUser(ctx, user)
 	if err != nil {
 		return 0, err
 	}
-
 	return id, nil
 }
 
 func (s *service) GetUserByID(ctx context.Context, id int64) (*entities.User, error) {
-	user, err := s.pgRepository.GetUserByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return user, nil
+	return s.pgRepository.GetUserByID(ctx, id)
+}
+
+func (s *service) GetUserByEmail(ctx context.Context, email string) (*entities.User, error) {
+	return s.pgRepository.GetUserByEmail(ctx, email)
 }
 
 func (s *service) UpdateUser(ctx context.Context, user *entities.User) error {
-	if err := s.pgRepository.UpdateUser(ctx, user); err != nil {
-		return err
-	}
-	return nil
+	return s.pgRepository.UpdateUser(ctx, user)
 }
 
 func (s *service) DeleteUser(ctx context.Context, id int64) error {
-	if err := s.pgRepository.DeleteUser(ctx, id); err != nil {
-		return err
-	}
-	return nil
+	return s.pgRepository.DeleteUser(ctx, id)
 }
 
 func (s *service) GetAllUsers(ctx context.Context) ([]*entities.User, error) {
-	users, err := s.pgRepository.GetAllUsers(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return users, nil
+	return s.pgRepository.GetAllUsers(ctx)
 }
