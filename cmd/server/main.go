@@ -139,6 +139,7 @@ func main() {
 
 	authHandler := handler.NewAuthHandler(srv, cfg)
 	userHandler := handler.NewUserHandler(srv)
+	stockHandler := handler.NewStockHandler(srv, log)
 
 	api := router.Group("/api")
 	{
@@ -167,6 +168,21 @@ func main() {
 			admin.GET("/:id", userHandler.GetUserByID)
 			admin.PUT("/:id", userHandler.UpdateUser)
 			admin.DELETE("/:id", userHandler.DeleteUser)
+		}
+
+		stocks := api.Group("/stocks")
+		stocks.Use(middleware.AuthMiddleware(cfg))
+		{
+			stocks.GET("/", stockHandler.GetAllStocks)
+			stocks.GET("/:id", stockHandler.GetStockByID)
+		}
+
+		adminStocks := api.Group("/stocks")
+		adminStocks.Use(middleware.AuthMiddleware(cfg, "ADMIN"))
+		{
+			adminStocks.POST("/", stockHandler.CreateStock)
+			adminStocks.PUT("/:id", stockHandler.UpdateStock)
+			adminStocks.DELETE("/:id", stockHandler.DeleteStock)
 		}
 	}
 

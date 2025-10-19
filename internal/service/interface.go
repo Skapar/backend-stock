@@ -13,4 +13,10 @@ type Service interface {
 	UpdateUser(ctx context.Context, user *entities.User) error
 	DeleteUser(ctx context.Context, id int64) error
 	GetAllUsers(ctx context.Context) ([]*entities.User, error)
+
+	CreateStock(ctx context.Context, stock *entities.Stock) (int64, error)
+	GetStockByID(ctx context.Context, id int64) (*entities.Stock, error)
+	GetAllStocks(ctx context.Context) ([]*entities.Stock, error)
+	UpdateStock(ctx context.Context, stock *entities.Stock) error
+	DeleteStock(ctx context.Context, id int64) error
 }

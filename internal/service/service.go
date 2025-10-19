@@ -65,3 +65,28 @@ func (s *service) DeleteUser(ctx context.Context, id int64) error {
 func (s *service) GetAllUsers(ctx context.Context) ([]*entities.User, error) {
 	return s.pgRepository.GetAllUsers(ctx)
 }
+
+func (s *service) CreateStock(ctx context.Context, stock *entities.Stock) (int64, error) {
+	id, err := s.pgRepository.CreateStock(ctx, stock)
+	if err != nil {
+		s.log.Errorf("Service.CreateStock failed: %v", err)
+		return 0, err
+	}
+	return id, nil
+}
+
+func (s *service) GetStockByID(ctx context.Context, id int64) (*entities.Stock, error) {
+	return s.pgRepository.GetStockByID(ctx, id)
+}
+
+func (s *service) GetAllStocks(ctx context.Context) ([]*entities.Stock, error) {
+	return s.pgRepository.GetAllStocks(ctx)
+}
+
+func (s *service) UpdateStock(ctx context.Context, stock *entities.Stock) error {
+	return s.pgRepository.UpdateStock(ctx, stock)
+}
+
+func (s *service) DeleteStock(ctx context.Context, id int64) error {
+	return s.pgRepository.DeleteStock(ctx, id)
+}

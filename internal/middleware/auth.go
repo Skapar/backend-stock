@@ -24,7 +24,6 @@ func AuthMiddleware(cfg *config.Config, allowedRoles ...string) gin.HandlerFunc 
 			return
 		}
 
-		// Проверка ролей
 		if len(allowedRoles) > 0 {
 			ok := false
 			for _, role := range allowedRoles {
