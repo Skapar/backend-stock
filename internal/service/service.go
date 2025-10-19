@@ -46,7 +46,12 @@ func (s *service) GetUserByID(ctx context.Context, id int64) (*entities.User, er
 }
 
 func (s *service) GetUserByEmail(ctx context.Context, email string) (*entities.User, error) {
-	return s.pgRepository.GetUserByEmail(ctx, email)
+	user, err := s.pgRepository.GetUserByEmail(ctx, email)
+	if err != nil {
+		s.log.Errorf("Service.GetUserByEmail failed: %v", err)
+		return nil, err
+	}
+	return user, nil
 }
 
 func (s *service) UpdateUser(ctx context.Context, user *entities.User) error {

@@ -20,7 +20,8 @@ func HashPassword(password string) (string, error) {
 }
 
 func CheckPasswordHash(hash, password string) bool {
-	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
 }
 
 func GenerateToken(secret string, ttlMinutes int, userID int64, role string) (string, error) {
@@ -35,8 +36,8 @@ func GenerateToken(secret string, ttlMinutes int, userID int64, role string) (st
 		},
 	}
 
-	tok := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return tok.SignedString([]byte(secret))
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
 }
 
 func ParseToken(secret, tokenStr string) (*Claims, error) {
@@ -47,8 +48,10 @@ func ParseToken(secret, tokenStr string) (*Claims, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
 		return claims, nil
 	}
+
 	return nil, errors.New("invalid token")
 }

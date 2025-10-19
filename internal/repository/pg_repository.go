@@ -32,19 +32,19 @@ func (r *pgRepository) CreateUser(ctx context.Context, user *entities.User) (int
 	if err := r.DB.Insert(ctx, &id, q, user.Email, user.Password, user.Role, user.Balance); err != nil {
 		return 0, errors.Wrap(err, "CreateUser: failed to create user")
 	}
-
 	return id, nil
 }
 
 func (r *pgRepository) GetUserByID(ctx context.Context, id int64) (*entities.User, error) {
 	q := `
-		SELECT id, email, password, role, balance, created_at
+		SELECT id, email, password, role, balance::float8, created_at
 		FROM stock_user
 		WHERE id = $1;
 	`
 
 	var user entities.User
-	if err := r.DB.Get(ctx, &user, q, id); err != nil {
+	if err := r.DB.GetOne(ctx, &user, q, id); err != nil {
+		r.log.Errorf("GetUserByID error: %v (id=%d)", err, id)
 		return nil, errors.Wrap(err, "GetUserByID: failed to get user")
 	}
 	return &user, nil
@@ -52,13 +52,13 @@ func (r *pgRepository) GetUserByID(ctx context.Context, id int64) (*entities.Use
 
 func (r *pgRepository) GetUserByEmail(ctx context.Context, email string) (*entities.User, error) {
 	q := `
-		SELECT id, email, password, role, balance, created_at
-		FROM stock_user
-		WHERE email = $1;
-	`
-
+        SELECT id, email, password, role, balance, created_at
+        FROM stock_user
+        WHERE email = $1;
+    `
 	var user entities.User
-	if err := r.DB.Get(ctx, &user, q, email); err != nil {
+	if err := r.DB.GetOne(ctx, &user, q, email); err != nil {
+		r.log.Errorf("GetUserByEmail error: %v (email=%s)", err, email)
 		return nil, errors.Wrap(err, "GetUserByEmail: failed to get user")
 	}
 	return &user, nil
@@ -71,10 +71,12 @@ func (r *pgRepository) UpdateUser(ctx context.Context, user *entities.User) erro
 			password = $2,
 			role = $3,
 			balance = $4
-		WHERE id = $5;
+		WHERE id = $5
+		RETURNING id;
 	`
 
-	if err := r.DB.Update(ctx, q, user.Email, user.Password, user.Role, user.Balance, user.ID); err != nil {
+	var updatedID int64
+	if err := r.DB.Update(ctx, &updatedID, q, user.Email, user.Password, user.Role, user.Balance, user.ID); err != nil {
 		return errors.Wrap(err, "UpdateUser: failed to update user")
 	}
 	return nil

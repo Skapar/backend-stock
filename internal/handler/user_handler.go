@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -97,4 +98,20 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "user deleted successfully"})
+}
+
+// GET /api/users/me
+func (h *UserHandler) GetMe(c *gin.Context) {
+	userID := c.GetInt64("userID")
+	fmt.Println("DEBUG USER ID:", userID)
+	user, err := h.service.GetUserByID(c, userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"email":   user.Email,
+		"balance": user.Balance,
+	})
 }

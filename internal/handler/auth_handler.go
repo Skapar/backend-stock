@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Skapar/backend/config"
@@ -28,7 +30,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	var req struct {
 		Email    string `json:"email" binding:"required,email"`
 		Password string `json:"password" binding:"required,min=6"`
-		Role     string `json:"role" binding:"required,oneof=admin user"`
+		Role     string `json:"role" binding:"required,oneof=TRADER ADMIN"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -45,7 +47,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	user := &entities.User{
 		Email:    req.Email,
 		Password: hashedPassword,
-		Role:     entities.Role(req.Role),
+		Role:     entities.Role(strings.ToUpper(req.Role)),
 		Balance:  0,
 	}
 
@@ -79,8 +81,21 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	// Логи для отладки
+	fmt.Printf("User from DB: %+v\n", user)
+	fmt.Printf("DB password: %q\n", user.Password)
+	fmt.Printf("Request password: %q\n", req.Password)
+	fmt.Printf("CheckPasswordHash result: %v\n", auth.CheckPasswordHash(user.Password, req.Password))
+
 	if !auth.CheckPasswordHash(user.Password, req.Password) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "invalid credentials",
+			"debug": gin.H{
+				"db_hash":     user.Password,
+				"request_pwd": req.Password,
+				"check":       auth.CheckPasswordHash(user.Password, req.Password),
+			},
+		})
 		return
 	}
 

@@ -86,16 +86,6 @@ func main() {
 		log.Fatalf("failed to init service: %v", err)
 	}
 
-	// srv, err = service.NewService(&service.SConfig{
-	// 	PGRepository: pgRepository,
-	// 	Cache:        cacheImpl,
-	// 	Log:          log,
-	// 	Config:       cfg,
-	// })
-	// if err != nil {
-	// 	log.Fatalf("failed to re-init service with notifier: %v", err)
-	// }
-
 	wrk := worker.NewWorker(&worker.WorkerConfig{
 		Service: srv,
 		Log:     log,
@@ -155,10 +145,17 @@ func main() {
 		api.POST("/register", authHandler.Register)
 		api.POST("/login", authHandler.Login)
 
-		protected := api.Group("/users")
-		protected.Use(middleware.AuthMiddleware(cfg, "ADMIN"))
+		users := api.Group("/users")
+
+		users.Use(middleware.AuthMiddleware(cfg))
 		{
-			protected.GET("/all", func(c *gin.Context) {
+			users.GET("/me", userHandler.GetMe)
+		}
+
+		admin := api.Group("/users")
+		admin.Use(middleware.AuthMiddleware(cfg, "ADMIN"))
+		{
+			admin.GET("/all", func(c *gin.Context) {
 				users, err := srv.GetAllUsers(c)
 				if err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -167,9 +164,9 @@ func main() {
 				c.JSON(http.StatusOK, users)
 			})
 
-			protected.GET("/:id", userHandler.GetUserByID)
-			protected.PUT("/:id", userHandler.UpdateUser)
-			protected.DELETE("/:id", userHandler.DeleteUser)
+			admin.GET("/:id", userHandler.GetUserByID)
+			admin.PUT("/:id", userHandler.UpdateUser)
+			admin.DELETE("/:id", userHandler.DeleteUser)
 		}
 	}
 
@@ -189,34 +186,6 @@ func main() {
 			log.Fatalf("server error: %v", err)
 		}
 	}()
-
-	// GRPC
-	// addr := fmt.Sprintf("0.0.0.0:%d", cfg.ListenGRPCPort)
-
-	// l, err := net.Listen("tcp", addr)
-	// if err != nil {
-	// 	log.Fatal(fmt.Sprintf("failed to listen: %s", err))
-	// }
-
-	// s := grpc.NewServer(
-	// 	grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
-	// 		server.MiddlewareLoggingStream(zlogger),
-	// 	)),
-	// 	grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-	// 		server.MiddlewareLoggingUnary(zlogger),
-	// 	)),
-	// )
-
-	// grpcServer := server.New(srv)
-	// stock.RegisterStockServiceServer(s, grpcServer)
-
-	// go func() {
-	// 	if err := s.Serve(l); err != nil {
-	// 		panic(fmt.Sprintf("failed to serve: %s", err))
-	// 	}
-	// }()
-
-	// log.Infof("Listening on port grpc: %v", addr)
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
