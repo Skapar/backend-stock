@@ -23,7 +23,6 @@ func NewStockHandler(service service.Service, log logger.Logger) *StockHandler {
 	}
 }
 
-// CreateStock — создание новой акции
 func (h *StockHandler) CreateStock(c *gin.Context) {
 	var input entities.Stock
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -31,7 +30,6 @@ func (h *StockHandler) CreateStock(c *gin.Context) {
 		return
 	}
 
-	// базовая валидация
 	if input.Symbol == "" || input.Name == "" || input.Price <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "symbol, name and positive price are required"})
 		return
@@ -52,7 +50,6 @@ func (h *StockHandler) CreateStock(c *gin.Context) {
 	})
 }
 
-// GetStockByID — получение акции по ID
 func (h *StockHandler) GetStockByID(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -71,7 +68,6 @@ func (h *StockHandler) GetStockByID(c *gin.Context) {
 	c.JSON(http.StatusOK, stock)
 }
 
-// GetAllStocks — получение всех акций
 func (h *StockHandler) GetAllStocks(c *gin.Context) {
 	stocks, err := h.service.GetAllStocks(c)
 	if err != nil {
@@ -83,7 +79,6 @@ func (h *StockHandler) GetAllStocks(c *gin.Context) {
 	c.JSON(http.StatusOK, stocks)
 }
 
-// UpdateStock — обновление акции
 func (h *StockHandler) UpdateStock(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -92,7 +87,6 @@ func (h *StockHandler) UpdateStock(c *gin.Context) {
 		return
 	}
 
-	// получаем текущую запись
 	existing, err := h.service.GetStockByID(c, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "stock not found"})
@@ -105,7 +99,6 @@ func (h *StockHandler) UpdateStock(c *gin.Context) {
 		return
 	}
 
-	// обновляем только переданные поля
 	if symbol, ok := input["symbol"].(string); ok {
 		existing.Symbol = symbol
 	}
@@ -131,7 +124,6 @@ func (h *StockHandler) UpdateStock(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "stock updated successfully"})
 }
 
-// DeleteStock — удаление акции
 func (h *StockHandler) DeleteStock(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
