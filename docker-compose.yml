@@ -29,3 +29,14 @@ services:
       - ./vol/data/postgres:/var/lib/postgresql/data
     networks:
       - backend_network
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: [ "redis-server", "--appendonly", "yes" ]
+    ports:
+      - "6231:6379"
+    volumes:
+      - ./vol/data/redis:/data
+    networks:
+      - backend_network
