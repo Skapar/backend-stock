@@ -109,7 +109,7 @@ func (s *service) GetAllStocks(ctx context.Context) ([]*entities.Stock, error) {
 		return nil, err
 	}
 
-	err = s.cache.Store(key, stocks, time.Minute*30, false) // TTL -> 30 мин
+	err = s.cache.Store(key, stocks, time.Minute*30, false)
 	if err != nil {
 		s.log.Errorf("Service.GetAllStocks cache store failed: %v", err)
 	}
