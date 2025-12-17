@@ -19,6 +19,7 @@ import (
 	"github.com/Skapar/backend/pkg/database"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -55,10 +56,14 @@ func main() {
 	cfg := config.New()
 	cfg.Init()
 
-	cacheImpl := new(cache.Cache)
+	rdb := redis.NewClient(&redis.Options{
+		Addr: cfg.RedisAddr,
+	})
+	cacheR := &cache.Cache{}
+	cacheR.SetCacheImplementation(rdb)
 
 	// Подключение к БД
-	db, err := database.New(cacheImpl, log, &database.Config{
+	db, err := database.New(cacheR, log, &database.Config{
 		PostgresMasterAddr: cfg.PostgresAddr,
 		PostgresSlaveAddr:  cfg.PostgresAddr,
 	})
@@ -78,7 +83,7 @@ func main() {
 	// Service
 	srv, err := service.NewService(&service.SConfig{
 		PGRepository: pgRepository,
-		Cache:        cacheImpl,
+		Cache:        cacheR,
 		Log:          log,
 		Config:       cfg,
 	})

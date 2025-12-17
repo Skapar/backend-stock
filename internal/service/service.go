@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/Skapar/backend/config"
 	"github.com/Skapar/backend/internal/models/entities"
@@ -46,11 +47,25 @@ func (s *service) GetUserByID(ctx context.Context, id int64) (*entities.User, er
 }
 
 func (s *service) GetUserByEmail(ctx context.Context, email string) (*entities.User, error) {
+	key := "get_user_email_" + email
+
+	var cached entities.User
+	err := s.cache.Get(key, &cached, false)
+	if err == nil {
+		return &cached, nil
+	}
+
 	user, err := s.pgRepository.GetUserByEmail(ctx, email)
 	if err != nil {
 		s.log.Errorf("Service.GetUserByEmail failed: %v", err)
 		return nil, err
 	}
+
+	err = s.cache.Store(key, user, time.Hour, false)
+	if err != nil {
+		s.log.Errorf("Service.GetUserByEmail cache store failed: %v", err)
+	}
+
 	return user, nil
 }
 
@@ -80,7 +95,26 @@ func (s *service) GetStockByID(ctx context.Context, id int64) (*entities.Stock, 
 }
 
 func (s *service) GetAllStocks(ctx context.Context) ([]*entities.Stock, error) {
-	return s.pgRepository.GetAllStocks(ctx)
+	key := "all_stocks"
+
+	var cached []*entities.Stock
+	err := s.cache.Get(key, &cached, false)
+	if err == nil && cached != nil {
+		return cached, nil
+	}
+
+	stocks, err := s.pgRepository.GetAllStocks(ctx)
+	if err != nil {
+		s.log.Errorf("Service.GetAllStocks failed: %v", err)
+		return nil, err
+	}
+
+	err = s.cache.Store(key, stocks, time.Minute*30, false)
+	if err != nil {
+		s.log.Errorf("Service.GetAllStocks cache store failed: %v", err)
+	}
+
+	return stocks, nil
 }
 
 func (s *service) UpdateStock(ctx context.Context, stock *entities.Stock) error {
