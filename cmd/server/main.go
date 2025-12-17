@@ -140,6 +140,9 @@ func main() {
 	authHandler := handler.NewAuthHandler(srv, cfg)
 	userHandler := handler.NewUserHandler(srv)
 	stockHandler := handler.NewStockHandler(srv, log)
+	orderHandler := handler.NewOrderHandler(srv)
+	portfolioHandler := handler.NewPortfolioHandler(srv)
+	historyHandler := handler.NewHistoryHandler(srv)
 
 	api := router.Group("/api")
 	{
@@ -183,6 +186,30 @@ func main() {
 			adminStocks.POST("/", stockHandler.CreateStock)
 			adminStocks.PUT("/:id", stockHandler.UpdateStock)
 			adminStocks.DELETE("/:id", stockHandler.DeleteStock)
+		}
+
+		orders := api.Group("/orders")
+		orders.Use(middleware.AuthMiddleware(cfg))
+		{
+			orders.POST("/", orderHandler.CreateOrder)
+			orders.GET("/user/:user_id", orderHandler.GetOrdersByUser)
+			orders.GET("/me", orderHandler.GetOrdersByUser)
+			orders.PUT("/:id/status", orderHandler.UpdateOrderStatus)
+		}
+
+		portfolio := api.Group("/portfolio")
+		portfolio.Use(middleware.AuthMiddleware(cfg))
+		{
+			portfolio.GET("/:user_id/:stock_id", portfolioHandler.GetPortfolio)
+			portfolio.POST("/", portfolioHandler.CreateOrUpdatePortfolio)
+		}
+
+		history := api.Group("/history")
+		history.Use(middleware.AuthMiddleware(cfg))
+		{
+			history.POST("/", historyHandler.AddHistory)
+			history.GET("/user/:user_id", historyHandler.GetHistoryByUser)
+			history.GET("/me", historyHandler.GetHistoryByUser)
 		}
 	}
 

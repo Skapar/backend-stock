@@ -21,4 +21,18 @@ type PGRepository interface {
 	GetAllStocks(ctx context.Context) ([]*entities.Stock, error)
 	UpdateStock(ctx context.Context, stock *entities.Stock) error
 	DeleteStock(ctx context.Context, id int64) error
+
+	// --- Orders ---
+	CreateOrder(ctx context.Context, order *entities.Order) (int64, error)
+	UpdateOrderStatus(ctx context.Context, orderID int64, status entities.OrderStatus) error
+	GetOrdersByUserID(ctx context.Context, userID int64) ([]*entities.Order, error)
+	GetOrderByID(ctx context.Context, orderID int64) (*entities.Order, error)
+
+	// --- Portfolio ---
+	GetPortfolio(ctx context.Context, userID, stockID int64) (*entities.Portfolio, error)
+	CreateOrUpdatePortfolio(ctx context.Context, portfolio *entities.Portfolio) error
+
+	// --- History ---
+	AddHistoryRecord(ctx context.Context, h *entities.History) (int64, error)
+	GetHistoryByUserID(ctx context.Context, userID int64) ([]*entities.History, error)
 }

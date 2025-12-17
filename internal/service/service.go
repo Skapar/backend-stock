@@ -90,3 +90,38 @@ func (s *service) UpdateStock(ctx context.Context, stock *entities.Stock) error 
 func (s *service) DeleteStock(ctx context.Context, id int64) error {
 	return s.pgRepository.DeleteStock(ctx, id)
 }
+
+// Order
+func (s *service) CreateOrder(ctx context.Context, order *entities.Order) (int64, error) {
+	return s.pgRepository.CreateOrder(ctx, order)
+}
+
+func (s *service) UpdateOrderStatus(ctx context.Context, orderID int64, status entities.OrderStatus) error {
+	return s.pgRepository.UpdateOrderStatus(ctx, orderID, status)
+}
+
+func (s *service) GetOrdersByUserID(ctx context.Context, userID int64) ([]*entities.Order, error) {
+	return s.pgRepository.GetOrdersByUserID(ctx, userID)
+}
+
+func (s *service) GetOrderByID(ctx context.Context, orderID int64) (*entities.Order, error) {
+	return s.pgRepository.GetOrderByID(ctx, orderID)
+}
+
+// Portfolio
+func (s *service) GetPortfolio(ctx context.Context, userID, stockID int64) (*entities.Portfolio, error) {
+	return s.pgRepository.GetPortfolio(ctx, userID, stockID)
+}
+
+func (s *service) CreateOrUpdatePortfolio(ctx context.Context, p *entities.Portfolio) error {
+	return s.pgRepository.CreateOrUpdatePortfolio(ctx, p)
+}
+
+// History
+func (s *service) AddHistoryRecord(ctx context.Context, h *entities.History) (int64, error) {
+	return s.pgRepository.AddHistoryRecord(ctx, h)
+}
+
+func (s *service) GetHistoryByUserID(ctx context.Context, userID int64) ([]*entities.History, error) {
+	return s.pgRepository.GetHistoryByUserID(ctx, userID)
+}

@@ -172,3 +172,139 @@ func (r *pgRepository) DeleteStock(ctx context.Context, id int64) error {
 	}
 	return nil
 }
+
+func (r *pgRepository) CreateOrder(ctx context.Context, order *entities.Order) (int64, error) {
+	q := `
+		INSERT INTO stock_order (user_id, stock_id, order_type, quantity, price, status, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,NOW(),NOW())
+		RETURNING id
+	`
+	var id int64
+	if err := r.DB.Insert(ctx, &id, q, order.UserID, order.StockID, order.OrderType, order.Quantity, order.Price, order.Status); err != nil {
+		return 0, errors.Wrap(err, "CreateOrder failed")
+	}
+	return id, nil
+}
+
+func (r *pgRepository) UpdateOrderStatus(ctx context.Context, orderID int64, status entities.OrderStatus) error {
+	q := `
+		UPDATE stock_order
+		SET status = $1, updated_at = NOW()
+		WHERE id = $2
+		RETURNING id
+	`
+	var id int64
+	if err := r.DB.Update(ctx, &id, q, status, orderID); err != nil {
+		return errors.Wrap(err, "UpdateOrderStatus failed")
+	}
+	return nil
+}
+
+func (r *pgRepository) GetOrdersByUserID(ctx context.Context, userID int64) ([]*entities.Order, error) {
+	q := `
+		SELECT id, user_id, stock_id, order_type, quantity, price, status, created_at, updated_at
+		FROM stock_order
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`
+	var orders []*entities.Order
+	if err := r.DB.Get(ctx, &orders, q, userID); err != nil {
+		return nil, errors.Wrap(err, "GetOrdersByUserID failed")
+	}
+	return orders, nil
+}
+
+func (r *pgRepository) GetOrderByID(ctx context.Context, orderID int64) (*entities.Order, error) {
+	q := `
+		SELECT id, user_id, stock_id, order_type, quantity, price, status, created_at, updated_at
+		FROM stock_order
+		WHERE id = $1
+	`
+	var order entities.Order
+	if err := r.DB.GetOne(ctx, &order, q, orderID); err != nil {
+		return nil, errors.Wrap(err, "GetOrderByID failed")
+	}
+	return &order, nil
+}
+
+func (r *pgRepository) GetPortfolio(ctx context.Context, userID, stockID int64) (*entities.Portfolio, error) {
+	q := `
+		SELECT id, user_id, stock_id, quantity, version, updated_at
+		FROM stock_portfolio
+		WHERE user_id = $1 AND stock_id = $2
+	`
+	var p entities.Portfolio
+	err := r.DB.GetOne(ctx, &p, q, userID, stockID)
+	if err != nil {
+		// Если записи нет, возвращаем nil
+		if errors.Is(err, database.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, errors.Wrap(err, "GetPortfolio failed")
+	}
+	return &p, nil
+}
+
+// CreateOrUpdatePortfolio без транзакции, с оптимистической блокировкой
+func (r *pgRepository) CreateOrUpdatePortfolio(ctx context.Context, portfolio *entities.Portfolio) error {
+	existing := &entities.Portfolio{}
+	qSelect := `SELECT id, quantity, version FROM stock_portfolio WHERE user_id=$1 AND stock_id=$2`
+	err := r.DB.GetOne(ctx, existing, qSelect, portfolio.UserID, portfolio.StockID)
+	if err != nil {
+		if !errors.Is(err, database.ErrNoRows) {
+			return errors.Wrap(err, "CreateOrUpdatePortfolio: select failed")
+		}
+		// insert new
+		qInsert := `INSERT INTO stock_portfolio (user_id, stock_id, quantity, version, updated_at)
+		            VALUES ($1,$2,$3,1,NOW())
+		            RETURNING id`
+		var id int64
+		if err := r.DB.Insert(ctx, &id, qInsert, portfolio.UserID, portfolio.StockID, portfolio.Quantity); err != nil {
+			return errors.Wrap(err, "CreateOrUpdatePortfolio: insert failed")
+		}
+		return nil
+	}
+
+	// update with optimistic lock
+	qUpdate := `UPDATE stock_portfolio
+	            SET quantity = $1, version = version+1, updated_at=NOW()
+	            WHERE id=$2 AND version=$3
+	            RETURNING id`
+	var updatedID int64
+	if err := r.DB.Update(ctx, &updatedID, qUpdate, existing.Quantity+portfolio.Quantity, existing.ID, existing.Version); err != nil {
+		return errors.Wrap(err, "CreateOrUpdatePortfolio: update failed (optimistic lock)")
+	}
+
+	if updatedID == 0 {
+		return errors.New("CreateOrUpdatePortfolio: optimistic lock failed")
+	}
+
+	return nil
+}
+
+func (r *pgRepository) AddHistoryRecord(ctx context.Context, h *entities.History) (int64, error) {
+	q := `
+		INSERT INTO stock_history (user_id, order_id, stock_id, action, details, amount, created_at)
+		VALUES ($1,$2,$3,$4,$5,$6,NOW())
+		RETURNING id
+	`
+	var id int64
+	if err := r.DB.Insert(ctx, &id, q, h.UserID, h.OrderID, h.StockID, h.Action, h.Details, h.Amount); err != nil {
+		return 0, errors.Wrap(err, "AddHistoryRecord failed")
+	}
+	return id, nil
+}
+
+func (r *pgRepository) GetHistoryByUserID(ctx context.Context, userID int64) ([]*entities.History, error) {
+	q := `
+		SELECT id, user_id, order_id, stock_id, action, details, amount, created_at
+		FROM stock_history
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`
+	var history []*entities.History
+	if err := r.DB.Get(ctx, &history, q, userID); err != nil {
+		return nil, errors.Wrap(err, "GetHistoryByUserID failed")
+	}
+	return history, nil
+}
