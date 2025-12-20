@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -71,7 +70,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
 
@@ -81,21 +80,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// Логи для отладки
-	fmt.Printf("User from DB: %+v\n", user)
-	fmt.Printf("DB password: %q\n", user.Password)
-	fmt.Printf("Request password: %q\n", req.Password)
-	fmt.Printf("CheckPasswordHash result: %v\n", auth.CheckPasswordHash(user.Password, req.Password))
+	passwordOK := auth.CheckPasswordHash(user.Password, req.Password)
 
-	if !auth.CheckPasswordHash(user.Password, req.Password) {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "invalid credentials",
-			"debug": gin.H{
-				"db_hash":     user.Password,
-				"request_pwd": req.Password,
-				"check":       auth.CheckPasswordHash(user.Password, req.Password),
-			},
-		})
+	if !passwordOK {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	}
 
@@ -111,7 +99,9 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"token":     token,
-		"expiresIn": time.Now().Add(time.Duration(h.cfg.JWTTTLMinutes) * time.Minute).Unix(),
+		"token": token,
+		"expiresIn": time.Now().
+			Add(time.Duration(h.cfg.JWTTTLMinutes) * time.Minute).
+			Unix(),
 	})
 }

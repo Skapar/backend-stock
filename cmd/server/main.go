@@ -57,7 +57,10 @@ func main() {
 	cfg.Init()
 
 	rdb := redis.NewClient(&redis.Options{
-		Addr: cfg.RedisAddr,
+		Addr:         cfg.RedisAddr,
+		DialTimeout:  2 * time.Second,
+		ReadTimeout:  2 * time.Second,
+		WriteTimeout: 2 * time.Second,
 	})
 	cacheR := &cache.Cache{}
 	cacheR.SetCacheImplementation(rdb)

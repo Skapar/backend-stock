@@ -49,7 +49,6 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	}
 
 	order.Price = stock.Price * float64(order.Quantity)
-
 	order.Status = entities.OrderStatus("PENDING")
 
 	id, err := h.service.CreateOrder(c, &order)
@@ -58,7 +57,13 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"order_id": id})
+	order.ID = id
+	if err := h.service.ExecuteOrder(c, &order); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to execute order: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"order_id": id, "message": "order executed successfully"})
 }
 
 func (h *OrderHandler) UpdateOrderStatus(c *gin.Context) {

@@ -7,6 +7,7 @@ import (
 	"github.com/Skapar/backend/internal/models/entities"
 	"github.com/Skapar/backend/pkg/database"
 	"github.com/Skapar/backend/pkg/logger"
+	"github.com/jackc/pgx/v4"
 	"github.com/pkg/errors"
 )
 
@@ -249,30 +250,29 @@ func (r *pgRepository) GetPortfolio(ctx context.Context, userID, stockID int64) 
 func (r *pgRepository) CreateOrUpdatePortfolio(ctx context.Context, portfolio *entities.Portfolio) error {
 	existing := &entities.Portfolio{}
 	qSelect := `SELECT id, quantity, version FROM stock_portfolio WHERE user_id=$1 AND stock_id=$2`
+
 	err := r.DB.GetOne(ctx, existing, qSelect, portfolio.UserID, portfolio.StockID)
 	if err != nil {
-		if !errors.Is(err, database.ErrNoRows) {
-			return errors.Wrap(err, "CreateOrUpdatePortfolio: select failed")
+		if errors.Is(err, pgx.ErrNoRows) {
+			// вставляем новую запись
+			qInsert := `INSERT INTO stock_portfolio (user_id, stock_id, quantity, version, updated_at)
+			            VALUES ($1,$2,$3,1,NOW()) RETURNING id`
+			var id int64
+			if err := r.DB.Insert(ctx, &id, qInsert, portfolio.UserID, portfolio.StockID, portfolio.Quantity); err != nil {
+				return errors.Wrap(err, "CreateOrUpdatePortfolio: insert failed")
+			}
+			return nil
 		}
-		// insert new
-		qInsert := `INSERT INTO stock_portfolio (user_id, stock_id, quantity, version, updated_at)
-		            VALUES ($1,$2,$3,1,NOW())
-		            RETURNING id`
-		var id int64
-		if err := r.DB.Insert(ctx, &id, qInsert, portfolio.UserID, portfolio.StockID, portfolio.Quantity); err != nil {
-			return errors.Wrap(err, "CreateOrUpdatePortfolio: insert failed")
-		}
-		return nil
+		return errors.Wrap(err, "CreateOrUpdatePortfolio: select failed")
 	}
 
-	// update with optimistic lock
+	// update с оптимистической блокировкой
 	qUpdate := `UPDATE stock_portfolio
 	            SET quantity = $1, version = version+1, updated_at=NOW()
-	            WHERE id=$2 AND version=$3
-	            RETURNING id`
+	            WHERE id=$2 AND version=$3 RETURNING id`
 	var updatedID int64
 	if err := r.DB.Update(ctx, &updatedID, qUpdate, existing.Quantity+portfolio.Quantity, existing.ID, existing.Version); err != nil {
-		return errors.Wrap(err, "CreateOrUpdatePortfolio: update failed (optimistic lock)")
+		return errors.Wrap(err, "CreateOrUpdatePortfolio: update failed")
 	}
 
 	if updatedID == 0 {

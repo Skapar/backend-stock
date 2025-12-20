@@ -23,6 +23,7 @@ type Service interface {
 	UpdateOrderStatus(ctx context.Context, orderID int64, status entities.OrderStatus) error
 	GetOrdersByUserID(ctx context.Context, userID int64) ([]*entities.Order, error)
 	GetOrderByID(ctx context.Context, orderID int64) (*entities.Order, error)
+	ExecuteOrder(ctx context.Context, order *entities.Order) error
 	GetPortfolio(ctx context.Context, userID, stockID int64) (*entities.Portfolio, error)
 	CreateOrUpdatePortfolio(ctx context.Context, p *entities.Portfolio) error
 	AddHistoryRecord(ctx context.Context, h *entities.History) (int64, error)

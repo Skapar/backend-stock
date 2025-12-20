@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/Skapar/backend/config"
@@ -46,27 +47,30 @@ func (s *service) GetUserByID(ctx context.Context, id int64) (*entities.User, er
 	return s.pgRepository.GetUserByID(ctx, id)
 }
 
+// func (s *service) GetUserByEmail(ctx context.Context, email string) (*entities.User, error) {
+// 	key := "get_user_email_" + email
+
+// 	var cached entities.User
+// 	err := s.cache.Get(key, &cached, false)
+// 	if err == nil {
+// 		return &cached, nil
+// 	}
+
+// 	user, err := s.pgRepository.GetUserByEmail(ctx, email)
+// 	if err != nil {
+// 		s.log.Errorf("Service.GetUserByEmail failed: %v", err)
+// 		return nil, err
+// 	}
+
+// 	err = s.cache.Store(key, user, time.Hour, false)
+// 	if err != nil {
+// 		s.log.Errorf("Service.GetUserByEmail cache store failed: %v", err)
+// 	}
+
+//		return user, nil
+//	}
 func (s *service) GetUserByEmail(ctx context.Context, email string) (*entities.User, error) {
-	key := "get_user_email_" + email
-
-	var cached entities.User
-	err := s.cache.Get(key, &cached, false)
-	if err == nil {
-		return &cached, nil
-	}
-
-	user, err := s.pgRepository.GetUserByEmail(ctx, email)
-	if err != nil {
-		s.log.Errorf("Service.GetUserByEmail failed: %v", err)
-		return nil, err
-	}
-
-	err = s.cache.Store(key, user, time.Hour, false)
-	if err != nil {
-		s.log.Errorf("Service.GetUserByEmail cache store failed: %v", err)
-	}
-
-	return user, nil
+	return s.pgRepository.GetUserByEmail(ctx, email)
 }
 
 func (s *service) UpdateUser(ctx context.Context, user *entities.User) error {
@@ -97,10 +101,15 @@ func (s *service) GetStockByID(ctx context.Context, id int64) (*entities.Stock, 
 func (s *service) GetAllStocks(ctx context.Context) ([]*entities.Stock, error) {
 	key := "all_stocks"
 
-	var cached []*entities.Stock
-	err := s.cache.Get(key, &cached, false)
-	if err == nil && cached != nil {
-		return cached, nil
+	if s.cache != nil {
+		var cached []*entities.Stock
+		err := s.cache.Get(key, &cached, false)
+		if err != nil {
+			s.log.Warnf("cache miss or error: %v", err)
+		}
+		if cached != nil {
+			return cached, nil
+		}
 	}
 
 	stocks, err := s.pgRepository.GetAllStocks(ctx)
@@ -109,9 +118,8 @@ func (s *service) GetAllStocks(ctx context.Context) ([]*entities.Stock, error) {
 		return nil, err
 	}
 
-	err = s.cache.Store(key, stocks, time.Minute*30, false)
-	if err != nil {
-		s.log.Errorf("Service.GetAllStocks cache store failed: %v", err)
+	if s.cache != nil {
+		_ = s.cache.Store(key, stocks, time.Minute*30, false)
 	}
 
 	return stocks, nil
@@ -158,4 +166,80 @@ func (s *service) AddHistoryRecord(ctx context.Context, h *entities.History) (in
 
 func (s *service) GetHistoryByUserID(ctx context.Context, userID int64) ([]*entities.History, error) {
 	return s.pgRepository.GetHistoryByUserID(ctx, userID)
+}
+
+func (s *service) ExecuteOrder(ctx context.Context, order *entities.Order) error {
+	// Получаем цену акции
+	stock, err := s.GetStockByID(ctx, order.StockID)
+	if err != nil {
+		return err
+	}
+
+	totalAmount := stock.Price * order.Quantity
+	order.Price = totalAmount
+
+	switch order.OrderType {
+	case entities.OrderBuy:
+		p, _ := s.GetPortfolio(ctx, order.UserID, order.StockID)
+		newQty := order.Quantity
+		if p != nil {
+			newQty += p.Quantity
+		}
+
+		err = s.CreateOrUpdatePortfolio(ctx, &entities.Portfolio{
+			UserID:   order.UserID,
+			StockID:  order.StockID,
+			Quantity: newQty,
+		})
+		if err != nil {
+			return err
+		}
+
+	case entities.OrderSell:
+		p, err := s.GetPortfolio(ctx, order.UserID, order.StockID)
+		if err != nil || p == nil || p.Quantity < order.Quantity {
+			return errors.New("not enough stocks to sell")
+		}
+		newQty := p.Quantity - order.Quantity
+		err = s.CreateOrUpdatePortfolio(ctx, &entities.Portfolio{
+			UserID:   order.UserID,
+			StockID:  order.StockID,
+			Quantity: newQty,
+		})
+		if err != nil {
+			return err
+		}
+
+	default:
+		return errors.New("unknown order type")
+	}
+
+	// Маппим order type в action
+	var action entities.HistoryAction
+	switch order.OrderType {
+	case entities.OrderBuy:
+		action = entities.ActionBuy
+	case entities.OrderSell:
+		action = entities.ActionSell
+	default:
+		action = ""
+	}
+
+	// Создаём запись в истории
+	h := &entities.History{
+		UserID:  order.UserID,
+		OrderID: &order.ID,
+		StockID: &order.StockID,
+		Action:  action,
+		Details: "Executed order",
+		Amount:  totalAmount,
+	}
+	_, err = s.AddHistoryRecord(ctx, h)
+	if err != nil {
+		return err
+	}
+
+	// Обновляем статус ордера
+	order.Status = entities.OrderCompleted
+	return s.UpdateOrderStatus(ctx, order.ID, order.Status)
 }
