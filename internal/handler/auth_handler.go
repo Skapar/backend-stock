@@ -7,20 +7,22 @@ import (
 
 	"github.com/Skapar/backend/config"
 	"github.com/Skapar/backend/internal/auth"
+	"github.com/Skapar/backend/internal/cqrs"
 	"github.com/Skapar/backend/internal/models/entities"
-	"github.com/Skapar/backend/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 type AuthHandler struct {
-	service service.Service
-	cfg     *config.Config
+	cmd   cqrs.Command
+	query cqrs.Query
+	cfg   *config.Config
 }
 
-func NewAuthHandler(s service.Service, cfg *config.Config) *AuthHandler {
+func NewAuthHandler(cmd cqrs.Command, query cqrs.Query, cfg *config.Config) *AuthHandler {
 	return &AuthHandler{
-		service: s,
-		cfg:     cfg,
+		cmd:   cmd,
+		query: query,
+		cfg:   cfg,
 	}
 }
 
@@ -50,7 +52,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		Balance:  0,
 	}
 
-	id, err := h.service.CreateUser(c, user)
+	id, err := h.cmd.CreateUser(c, user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -74,15 +76,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	user, err := h.service.GetUserByEmail(c, req.Email)
+	user, err := h.query.GetUserByEmail(c, req.Email)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	}
 
-	passwordOK := auth.CheckPasswordHash(user.Password, req.Password)
-
-	if !passwordOK {
+	if !auth.CheckPasswordHash(user.Password, req.Password) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	}
@@ -99,9 +99,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"token": token,
-		"expiresIn": time.Now().
-			Add(time.Duration(h.cfg.JWTTTLMinutes) * time.Minute).
-			Unix(),
+		"token":     token,
+		"expiresIn": time.Now().Add(time.Duration(h.cfg.JWTTTLMinutes) * time.Minute).Unix(),
 	})
 }

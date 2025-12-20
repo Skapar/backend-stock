@@ -1,22 +1,25 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/Skapar/backend/internal/auth"
+	"github.com/Skapar/backend/internal/cqrs"
 	"github.com/Skapar/backend/internal/models/entities"
-	"github.com/Skapar/backend/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 type UserHandler struct {
-	service service.Service
+	cmd   cqrs.Command
+	query cqrs.Query
 }
 
-func NewUserHandler(s service.Service) *UserHandler {
-	return &UserHandler{service: s}
+func NewUserHandler(cmd cqrs.Command, query cqrs.Query) *UserHandler {
+	return &UserHandler{
+		cmd:   cmd,
+		query: query,
+	}
 }
 
 // GET /api/users/:id
@@ -28,7 +31,7 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 		return
 	}
 
-	user, err := h.service.GetUserByID(c, id)
+	user, err := h.query.GetUserByID(c, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
@@ -52,12 +55,13 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		Role     string  `json:"role" binding:"omitempty,oneof=ADMIN TRADER"`
 		Balance  float64 `json:"balance"`
 	}
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	user, err := h.service.GetUserByID(c, id)
+	user, err := h.query.GetUserByID(c, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
@@ -75,7 +79,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 	user.Balance = req.Balance
 
-	if err := h.service.UpdateUser(c, user); err != nil {
+	if err := h.cmd.UpdateUser(c, user); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -92,7 +96,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteUser(c, id); err != nil {
+	if err := h.cmd.DeleteUser(c, id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -103,8 +107,8 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 // GET /api/users/me
 func (h *UserHandler) GetMe(c *gin.Context) {
 	userID := c.GetInt64("userID")
-	fmt.Println("DEBUG USER ID:", userID)
-	user, err := h.service.GetUserByID(c, userID)
+
+	user, err := h.query.GetUserByID(c, userID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return

@@ -5,24 +5,27 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Skapar/backend/internal/cqrs"
 	"github.com/Skapar/backend/internal/models/entities"
-	"github.com/Skapar/backend/internal/service"
 	"github.com/Skapar/backend/pkg/logger"
 	"github.com/gin-gonic/gin"
 )
 
 type StockHandler struct {
-	service service.Service
-	log     logger.Logger
+	cmd   cqrs.Command
+	query cqrs.Query
+	log   logger.Logger
 }
 
-func NewStockHandler(service service.Service, log logger.Logger) *StockHandler {
+func NewStockHandler(cmd cqrs.Command, query cqrs.Query, log logger.Logger) *StockHandler {
 	return &StockHandler{
-		service: service,
-		log:     log,
+		cmd:   cmd,
+		query: query,
+		log:   log,
 	}
 }
 
+// POST /api/stocks
 func (h *StockHandler) CreateStock(c *gin.Context) {
 	var input entities.Stock
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -37,7 +40,7 @@ func (h *StockHandler) CreateStock(c *gin.Context) {
 
 	input.UpdatedAt = time.Now()
 
-	id, err := h.service.CreateStock(c, &input)
+	id, err := h.cmd.CreateStock(c, &input)
 	if err != nil {
 		h.log.Errorf("CreateStock error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create stock"})
@@ -50,6 +53,7 @@ func (h *StockHandler) CreateStock(c *gin.Context) {
 	})
 }
 
+// GET /api/stocks/:id
 func (h *StockHandler) GetStockByID(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -58,7 +62,7 @@ func (h *StockHandler) GetStockByID(c *gin.Context) {
 		return
 	}
 
-	stock, err := h.service.GetStockByID(c, id)
+	stock, err := h.query.GetStockByID(c, id)
 	if err != nil {
 		h.log.Errorf("GetStockByID error: %v", err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "stock not found"})
@@ -68,8 +72,9 @@ func (h *StockHandler) GetStockByID(c *gin.Context) {
 	c.JSON(http.StatusOK, stock)
 }
 
+// GET /api/stocks
 func (h *StockHandler) GetAllStocks(c *gin.Context) {
-	stocks, err := h.service.GetAllStocks(c)
+	stocks, err := h.query.GetAllStocks(c)
 	if err != nil {
 		h.log.Errorf("GetAllStocks error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch stocks"})
@@ -79,6 +84,7 @@ func (h *StockHandler) GetAllStocks(c *gin.Context) {
 	c.JSON(http.StatusOK, stocks)
 }
 
+// PUT /api/stocks/:id
 func (h *StockHandler) UpdateStock(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -87,7 +93,7 @@ func (h *StockHandler) UpdateStock(c *gin.Context) {
 		return
 	}
 
-	existing, err := h.service.GetStockByID(c, id)
+	existing, err := h.query.GetStockByID(c, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "stock not found"})
 		return
@@ -115,7 +121,7 @@ func (h *StockHandler) UpdateStock(c *gin.Context) {
 
 	existing.UpdatedAt = time.Now()
 
-	if err := h.service.UpdateStock(c, existing); err != nil {
+	if err := h.cmd.UpdateStock(c, existing); err != nil {
 		h.log.Errorf("UpdateStock error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update stock"})
 		return
@@ -124,6 +130,7 @@ func (h *StockHandler) UpdateStock(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "stock updated successfully"})
 }
 
+// DELETE /api/stocks/:id
 func (h *StockHandler) DeleteStock(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -132,7 +139,7 @@ func (h *StockHandler) DeleteStock(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteStock(c, id); err != nil {
+	if err := h.cmd.DeleteStock(c, id); err != nil {
 		h.log.Errorf("DeleteStock error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete stock"})
 		return

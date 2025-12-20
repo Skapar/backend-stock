@@ -282,6 +282,24 @@ func (r *pgRepository) CreateOrUpdatePortfolio(ctx context.Context, portfolio *e
 	return nil
 }
 
+func (r *pgRepository) GetPortfoliosByUserID(ctx context.Context, userID int64) ([]*entities.Portfolio, error) {
+	q := `
+		SELECT id, user_id, stock_id, quantity, version, updated_at
+		FROM stock_portfolio
+		WHERE user_id = $1
+	`
+	var portfolios []*entities.Portfolio
+	err := r.DB.Get(ctx, &portfolios, q, userID)
+	if err != nil {
+		// Если записей нет, возвращаем пустой слайс
+		if errors.Is(err, database.ErrNoRows) {
+			return []*entities.Portfolio{}, nil
+		}
+		return nil, errors.Wrap(err, "GetPortfoliosByUserID failed")
+	}
+	return portfolios, nil
+}
+
 func (r *pgRepository) AddHistoryRecord(ctx context.Context, h *entities.History) (int64, error) {
 	q := `
 		INSERT INTO stock_history (user_id, order_id, stock_id, action, details, amount, created_at)

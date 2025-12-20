@@ -4,17 +4,18 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Skapar/backend/internal/cqrs"
 	"github.com/Skapar/backend/internal/models/entities"
-	"github.com/Skapar/backend/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 type PortfolioHandler struct {
-	service service.Service
+	cmd   cqrs.Command
+	query cqrs.Query
 }
 
-func NewPortfolioHandler(s service.Service) *PortfolioHandler {
-	return &PortfolioHandler{service: s}
+func NewPortfolioHandler(cmd cqrs.Command, query cqrs.Query) *PortfolioHandler {
+	return &PortfolioHandler{cmd: cmd, query: query}
 }
 
 // ADMIN GET /api/portfolio/:user_id/:stock_id
@@ -48,15 +49,21 @@ func (h *PortfolioHandler) GetPortfolio(c *gin.Context) {
 		userID = tokenUserID
 	}
 
-	p, err := h.service.GetPortfolio(c, userID, stockID)
+	p, err := h.query.GetPortfolio(c, userID, stockID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get portfolio: " + err.Error()})
+		return
+	}
+
+	if p == nil {
+		c.JSON(http.StatusOK, gin.H{"message": "no portfolio record found"})
 		return
 	}
 
 	c.JSON(http.StatusOK, p)
 }
 
+// POST /api/portfolio
 func (h *PortfolioHandler) CreateOrUpdatePortfolio(c *gin.Context) {
 	var body struct {
 		UserID   int64   `json:"user_id"`
@@ -78,7 +85,7 @@ func (h *PortfolioHandler) CreateOrUpdatePortfolio(c *gin.Context) {
 		body.UserID = tokenUserID
 	}
 
-	if err := h.service.CreateOrUpdatePortfolio(c, &entities.Portfolio{
+	if err := h.cmd.CreateOrUpdatePortfolio(c, &entities.Portfolio{
 		UserID:   body.UserID,
 		StockID:  body.StockID,
 		Quantity: body.Quantity,
@@ -88,4 +95,18 @@ func (h *PortfolioHandler) CreateOrUpdatePortfolio(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "portfolio updated successfully"})
+}
+
+// USER GET /api/portfolio/me
+func (h *PortfolioHandler) GetMyPortfolio(c *gin.Context) {
+	uid, _ := c.Get("userID")
+	tokenUserID := uid.(int64)
+
+	portfolios, err := h.query.GetPortfoliosByUserID(c, tokenUserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch portfolio: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, portfolios)
 }

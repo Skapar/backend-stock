@@ -31,6 +31,7 @@ type PGRepository interface {
 	// --- Portfolio ---
 	GetPortfolio(ctx context.Context, userID, stockID int64) (*entities.Portfolio, error)
 	CreateOrUpdatePortfolio(ctx context.Context, portfolio *entities.Portfolio) error
+	GetPortfoliosByUserID(ctx context.Context, userID int64) ([]*entities.Portfolio, error)
 
 	// --- History ---
 	AddHistoryRecord(ctx context.Context, h *entities.History) (int64, error)

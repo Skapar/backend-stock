@@ -172,6 +172,10 @@ func (s *service) CreateOrUpdatePortfolio(ctx context.Context, p *entities.Portf
 	return s.pgRepository.CreateOrUpdatePortfolio(ctx, p)
 }
 
+func (s *service) GetPortfoliosByUserID(ctx context.Context, userID int64) ([]*entities.Portfolio, error) {
+	return s.pgRepository.GetPortfoliosByUserID(ctx, userID)
+}
+
 // History
 func (s *service) AddHistoryRecord(ctx context.Context, h *entities.History) (int64, error) {
 	return s.pgRepository.AddHistoryRecord(ctx, h)

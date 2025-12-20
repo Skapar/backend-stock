@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Skapar/backend/internal/cqrs"
 	"github.com/Skapar/backend/internal/handler"
 	"github.com/Skapar/backend/internal/middleware"
 	"github.com/Skapar/backend/internal/repository"
@@ -99,6 +100,8 @@ func main() {
 		log.Fatalf("failed to init service: %v", err)
 	}
 
+	cmd, query := cqrs.NewCQRS(srv)
+
 	wrk := worker.NewWorker(&worker.WorkerConfig{
 		Service: srv,
 		Log:     log,
@@ -150,12 +153,12 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	authHandler := handler.NewAuthHandler(srv, cfg)
-	userHandler := handler.NewUserHandler(srv)
-	stockHandler := handler.NewStockHandler(srv, log)
-	orderHandler := handler.NewOrderHandler(srv)
-	portfolioHandler := handler.NewPortfolioHandler(srv)
-	historyHandler := handler.NewHistoryHandler(srv)
+	authHandler := handler.NewAuthHandler(cmd, query, cfg)
+	userHandler := handler.NewUserHandler(cmd, query)
+	stockHandler := handler.NewStockHandler(cmd, query, log)
+	orderHandler := handler.NewOrderHandler(cmd, query)
+	portfolioHandler := handler.NewPortfolioHandler(cmd, query)
+	historyHandler := handler.NewHistoryHandler(cmd, query)
 
 	api := router.Group("/api")
 	{
@@ -215,6 +218,7 @@ func main() {
 		{
 			portfolio.GET("/:user_id/:stock_id", portfolioHandler.GetPortfolio)
 			portfolio.POST("/", portfolioHandler.CreateOrUpdatePortfolio)
+			portfolio.GET("/me", portfolioHandler.GetMyPortfolio)
 		}
 
 		history := api.Group("/history")

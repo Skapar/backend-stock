@@ -4,17 +4,18 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Skapar/backend/internal/cqrs"
 	"github.com/Skapar/backend/internal/models/entities"
-	"github.com/Skapar/backend/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 type HistoryHandler struct {
-	service service.Service
+	cmd   cqrs.Command
+	query cqrs.Query
 }
 
-func NewHistoryHandler(s service.Service) *HistoryHandler {
-	return &HistoryHandler{service: s}
+func NewHistoryHandler(cmd cqrs.Command, query cqrs.Query) *HistoryHandler {
+	return &HistoryHandler{cmd: cmd, query: query}
 }
 
 // POST /api/history
@@ -34,7 +35,7 @@ func (h *HistoryHandler) AddHistory(c *gin.Context) {
 		rec.UserID = tokenUserID
 	}
 
-	id, err := h.service.AddHistoryRecord(c, &rec)
+	id, err := h.cmd.AddHistoryRecord(c, &rec)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add history record: " + err.Error()})
 		return
@@ -52,7 +53,7 @@ func (h *HistoryHandler) GetHistoryByUser(c *gin.Context) {
 
 	var userID int64
 	if tokenUserRole == "ADMIN" {
-		userIDStr := c.Param("userID")
+		userIDStr := c.Param("user_id")
 		if userIDStr != "" {
 			var err error
 			userID, err = strconv.ParseInt(userIDStr, 10, 64)
@@ -67,7 +68,7 @@ func (h *HistoryHandler) GetHistoryByUser(c *gin.Context) {
 		userID = tokenUserID
 	}
 
-	history, err := h.service.GetHistoryByUserID(c, userID)
+	history, err := h.query.GetHistoryByUserID(c, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get history: " + err.Error()})
 		return

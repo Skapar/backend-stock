@@ -4,19 +4,21 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Skapar/backend/internal/cqrs"
 	"github.com/Skapar/backend/internal/models/entities"
-	"github.com/Skapar/backend/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 type OrderHandler struct {
-	service service.Service
+	cmd   cqrs.Command
+	query cqrs.Query
 }
 
-func NewOrderHandler(s service.Service) *OrderHandler {
-	return &OrderHandler{service: s}
+func NewOrderHandler(cmd cqrs.Command, query cqrs.Query) *OrderHandler {
+	return &OrderHandler{cmd: cmd, query: query}
 }
 
+// POST /api/orders
 func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	var order entities.Order
 	if err := c.ShouldBindJSON(&order); err != nil {
@@ -42,7 +44,7 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 		order.UserID = tokenUserID
 	}
 
-	stock, err := h.service.GetStockByID(c, order.StockID)
+	stock, err := h.query.GetStockByID(c, order.StockID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch stock: " + err.Error()})
 		return
@@ -51,14 +53,14 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	order.Price = stock.Price * float64(order.Quantity)
 	order.Status = entities.OrderStatus("PENDING")
 
-	id, err := h.service.CreateOrder(c, &order)
+	id, err := h.cmd.CreateOrder(c, &order)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create order: " + err.Error()})
 		return
 	}
 
 	order.ID = id
-	if err := h.service.ExecuteOrder(c, &order); err != nil {
+	if err := h.cmd.ExecuteOrder(c, &order); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to execute order: " + err.Error()})
 		return
 	}
@@ -66,6 +68,7 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"order_id": id, "message": "order executed successfully"})
 }
 
+// PUT /api/orders/:id/status
 func (h *OrderHandler) UpdateOrderStatus(c *gin.Context) {
 	idStr := c.Param("id")
 	orderID, err := strconv.ParseInt(idStr, 10, 64)
@@ -74,7 +77,7 @@ func (h *OrderHandler) UpdateOrderStatus(c *gin.Context) {
 		return
 	}
 
-	order, err := h.service.GetOrderByID(c, orderID)
+	order, err := h.query.GetOrderByID(c, orderID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch order: " + err.Error()})
 		return
@@ -111,7 +114,7 @@ func (h *OrderHandler) UpdateOrderStatus(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.UpdateOrderStatus(c, orderID, entities.OrderStatus(body.Status)); err != nil {
+	if err := h.cmd.UpdateOrderStatus(c, orderID, entities.OrderStatus(body.Status)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update status: " + err.Error()})
 		return
 	}
@@ -119,6 +122,7 @@ func (h *OrderHandler) UpdateOrderStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "order status updated"})
 }
 
+// GET /api/orders/user/:user_id?
 func (h *OrderHandler) GetOrdersByUser(c *gin.Context) {
 	uid, _ := c.Get("userID")
 	tokenUserID := uid.(int64)
@@ -142,7 +146,7 @@ func (h *OrderHandler) GetOrdersByUser(c *gin.Context) {
 		userID = tokenUserID
 	}
 
-	orders, err := h.service.GetOrdersByUserID(c, userID)
+	orders, err := h.query.GetOrdersByUserID(c, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get orders: " + err.Error()})
 		return
