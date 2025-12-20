@@ -47,30 +47,37 @@ func (s *service) GetUserByID(ctx context.Context, id int64) (*entities.User, er
 	return s.pgRepository.GetUserByID(ctx, id)
 }
 
-// func (s *service) GetUserByEmail(ctx context.Context, email string) (*entities.User, error) {
-// 	key := "get_user_email_" + email
-
-// 	var cached entities.User
-// 	err := s.cache.Get(key, &cached, false)
-// 	if err == nil {
-// 		return &cached, nil
-// 	}
-
-// 	user, err := s.pgRepository.GetUserByEmail(ctx, email)
-// 	if err != nil {
-// 		s.log.Errorf("Service.GetUserByEmail failed: %v", err)
-// 		return nil, err
-// 	}
-
-// 	err = s.cache.Store(key, user, time.Hour, false)
-// 	if err != nil {
-// 		s.log.Errorf("Service.GetUserByEmail cache store failed: %v", err)
-// 	}
-
-//		return user, nil
-//	}
 func (s *service) GetUserByEmail(ctx context.Context, email string) (*entities.User, error) {
-	return s.pgRepository.GetUserByEmail(ctx, email)
+	key := "user_email:" + email
+	if s.cache != nil {
+		var cached entities.User
+
+		start := time.Now()
+		err := s.cache.Get(key, &cached, false)
+		s.log.Infof("Redis GET user took: %s err=%v", time.Since(start), err)
+
+		if err == nil && cached.ID != 0 {
+			return &cached, nil
+		}
+	}
+
+	start := time.Now()
+	user, err := s.pgRepository.GetUserByEmail(ctx, email)
+	s.log.Infof("PG GetUserByEmail took: %s err=%v", time.Since(start), err)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if s.cache != nil {
+		go func(u *entities.User) {
+			if err := s.cache.Store(key, u, time.Hour, false); err != nil {
+				s.log.Warnf("Redis STORE user failed: %v", err)
+			}
+		}(user)
+	}
+
+	return user, nil
 }
 
 func (s *service) UpdateUser(ctx context.Context, user *entities.User) error {
@@ -99,27 +106,33 @@ func (s *service) GetStockByID(ctx context.Context, id int64) (*entities.Stock, 
 }
 
 func (s *service) GetAllStocks(ctx context.Context) ([]*entities.Stock, error) {
-	key := "all_stocks"
+	key := "stocks:all"
 
 	if s.cache != nil {
 		var cached []*entities.Stock
+
+		start := time.Now()
 		err := s.cache.Get(key, &cached, false)
-		if err != nil {
-			s.log.Warnf("cache miss or error: %v", err)
-		}
-		if cached != nil {
+		s.log.Infof("Redis GET stocks took: %s err=%v len=%d",
+			time.Since(start), err, len(cached))
+
+		if err == nil && len(cached) > 0 {
 			return cached, nil
 		}
 	}
 
+	start := time.Now()
 	stocks, err := s.pgRepository.GetAllStocks(ctx)
+	s.log.Infof("PG GetAllStocks took: %s err=%v", time.Since(start), err)
+
 	if err != nil {
-		s.log.Errorf("Service.GetAllStocks failed: %v", err)
 		return nil, err
 	}
 
 	if s.cache != nil {
-		_ = s.cache.Store(key, stocks, time.Minute*30, false)
+		go func(data []*entities.Stock) {
+			_ = s.cache.Store(key, data, 10*time.Minute, false)
+		}(stocks)
 	}
 
 	return stocks, nil

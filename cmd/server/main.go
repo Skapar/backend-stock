@@ -56,14 +56,19 @@ func main() {
 	cfg := config.New()
 	cfg.Init()
 
-	rdb := redis.NewClient(&redis.Options{
-		Addr:         cfg.RedisAddr,
-		DialTimeout:  2 * time.Second,
-		ReadTimeout:  2 * time.Second,
-		WriteTimeout: 2 * time.Second,
-	})
-	cacheR := &cache.Cache{}
-	cacheR.SetCacheImplementation(rdb)
+	var cacheR *cache.Cache
+
+	if cfg.RedisAddr != "" {
+		rdb := redis.NewClient(&redis.Options{
+			Addr:         cfg.RedisAddr,
+			DialTimeout:  50 * time.Millisecond,
+			ReadTimeout:  50 * time.Millisecond,
+			WriteTimeout: 50 * time.Millisecond,
+		})
+
+		cacheR = &cache.Cache{}
+		cacheR.SetCacheImplementation(rdb)
+	}
 
 	// Подключение к БД
 	db, err := database.New(cacheR, log, &database.Config{
