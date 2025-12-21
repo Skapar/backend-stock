@@ -1,3 +1,11 @@
+// @title Backend API (Stock)
+// @version 1.0
+// @description Backend Stock API (Gin + PostgreSQL + JWT)
+// @BasePath /api
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer {token}"
 package main
 
 import (
@@ -10,6 +18,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Skapar/backend/config"
 	"github.com/Skapar/backend/internal/cqrs"
 	"github.com/Skapar/backend/internal/handler"
 	"github.com/Skapar/backend/internal/middleware"
@@ -18,14 +27,18 @@ import (
 	"github.com/Skapar/backend/internal/worker"
 	"github.com/Skapar/backend/pkg/cache"
 	"github.com/Skapar/backend/pkg/database"
+
+	// Swagger
+	docs "github.com/Skapar/backend/docs"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/Skapar/backend/config"
 )
 
 func main() {
@@ -83,13 +96,11 @@ func main() {
 	/*
 	 * repository layer
 	 */
-
 	pgRepository := repository.NewPGRepository(db, log)
 
 	/*
 	 * service layer
 	 */
-	// Service
 	srv, err := service.NewService(&service.SConfig{
 		PGRepository: pgRepository,
 		Cache:        cacheR,
@@ -106,13 +117,16 @@ func main() {
 		Service: srv,
 		Log:     log,
 	})
-
 	wrk.Start()
 
 	// Gin
 	router := gin.New()
 	router.Use(gin.LoggerWithConfig(gin.LoggerConfig{SkipPaths: []string{"/health"}}))
 	router.Use(gin.Recovery())
+
+	// Swagger route
+	docs.SwaggerInfo.BasePath = "/api"
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// CORS
 	corsConfig := cors.Config{
@@ -166,7 +180,6 @@ func main() {
 		api.POST("/login", authHandler.Login)
 
 		users := api.Group("/users")
-
 		users.Use(middleware.AuthMiddleware(cfg))
 		{
 			users.GET("/me", userHandler.GetMe)
@@ -175,14 +188,7 @@ func main() {
 		admin := api.Group("/users")
 		admin.Use(middleware.AuthMiddleware(cfg, "ADMIN"))
 		{
-			admin.GET("/all", func(c *gin.Context) {
-				users, err := srv.GetAllUsers(c)
-				if err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-					return
-				}
-				c.JSON(http.StatusOK, users)
-			})
+			admin.GET("/all", userHandler.GetAllUsers)
 
 			admin.GET("/:id", userHandler.GetUserByID)
 			admin.PUT("/:id", userHandler.UpdateUser)

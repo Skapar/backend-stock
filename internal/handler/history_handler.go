@@ -18,11 +18,22 @@ func NewHistoryHandler(cmd cqrs.Command, query cqrs.Query) *HistoryHandler {
 	return &HistoryHandler{cmd: cmd, query: query}
 }
 
-// POST /api/history
+// AddHistory godoc
+// @Summary Add history record
+// @Tags history
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param body body entities.History true "History payload"
+// @Success 201 {object} HistoryCreatedResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /history/ [post]
 func (h *HistoryHandler) AddHistory(c *gin.Context) {
 	var rec entities.History
 	if err := c.ShouldBindJSON(&rec); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON: " + err.Error()})
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid JSON: " + err.Error()})
 		return
 	}
 
@@ -33,18 +44,34 @@ func (h *HistoryHandler) AddHistory(c *gin.Context) {
 
 	if tokenUserRole != "ADMIN" {
 		rec.UserID = tokenUserID
+	} else {
+		// admin если не указал user_id — записываем на себя
+		if rec.UserID == 0 {
+			rec.UserID = tokenUserID
+		}
 	}
 
 	id, err := h.cmd.AddHistoryRecord(c, &rec)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add history record: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to add history record: " + err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"history_id": id})
+	c.JSON(http.StatusCreated, HistoryCreatedResponse{HistoryID: id})
 }
 
-// GET /api/history/user/:user_id
+// GetHistoryByUser godoc
+// @Summary Get history (admin can pass user_id, trader gets own)
+// @Tags history
+// @Security BearerAuth
+// @Produce json
+// @Param user_id path int false "User ID (admin only)"
+// @Success 200 {array} entities.History
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /history/user/{user_id} [get]
+// @Router /history/me [get]
 func (h *HistoryHandler) GetHistoryByUser(c *gin.Context) {
 	uid, _ := c.Get("userID")
 	tokenUserID := uid.(int64)
@@ -58,7 +85,7 @@ func (h *HistoryHandler) GetHistoryByUser(c *gin.Context) {
 			var err error
 			userID, err = strconv.ParseInt(userIDStr, 10, 64)
 			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+				c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid user ID"})
 				return
 			}
 		} else {
@@ -70,7 +97,7 @@ func (h *HistoryHandler) GetHistoryByUser(c *gin.Context) {
 
 	history, err := h.query.GetHistoryByUserID(c, userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get history: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to get history: " + err.Error()})
 		return
 	}
 

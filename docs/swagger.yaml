@@ -1,0 +1,989 @@
+basePath: /api
+definitions:
+  github_com_Skapar_backend_internal_models_entities.History:
+    properties:
+      action:
+        $ref: '#/definitions/github_com_Skapar_backend_internal_models_entities.HistoryAction'
+      amount:
+        type: number
+      created_at:
+        type: string
+      details:
+        type: string
+      id:
+        type: integer
+      order_id:
+        type: integer
+      stock_id:
+        type: integer
+      user_id:
+        type: integer
+    type: object
+  github_com_Skapar_backend_internal_models_entities.HistoryAction:
+    enum:
+    - BUY
+    - SELL
+    - BALANCE_UPDATE
+    - DEPOSIT
+    - WITHDRAW
+    type: string
+    x-enum-varnames:
+    - ActionBuy
+    - ActionSell
+    - ActionBalanceUpdate
+    - ActionDeposit
+    - ActionWithdraw
+  github_com_Skapar_backend_internal_models_entities.Order:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      order_type:
+        $ref: '#/definitions/github_com_Skapar_backend_internal_models_entities.OrderType'
+      price:
+        type: number
+      quantity:
+        type: number
+      status:
+        $ref: '#/definitions/github_com_Skapar_backend_internal_models_entities.OrderStatus'
+      stock_id:
+        type: integer
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  github_com_Skapar_backend_internal_models_entities.OrderStatus:
+    enum:
+    - PENDING
+    - COMPLETED
+    - FAILED
+    type: string
+    x-enum-varnames:
+    - OrderPending
+    - OrderCompleted
+    - OrderFailed
+  github_com_Skapar_backend_internal_models_entities.OrderType:
+    enum:
+    - BUY
+    - SELL
+    type: string
+    x-enum-varnames:
+    - OrderBuy
+    - OrderSell
+  github_com_Skapar_backend_internal_models_entities.Portfolio:
+    properties:
+      id:
+        type: integer
+      quantity:
+        type: number
+      stock_id:
+        type: integer
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+      version:
+        type: integer
+    type: object
+  github_com_Skapar_backend_internal_models_entities.Role:
+    enum:
+    - TRADER
+    - ADMIN
+    type: string
+    x-enum-varnames:
+    - RoleTrader
+    - RoleAdmin
+  github_com_Skapar_backend_internal_models_entities.Stock:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      price:
+        type: number
+      symbol:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_Skapar_backend_internal_models_entities.User:
+    properties:
+      balance:
+        type: number
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      password:
+        type: string
+      role:
+        $ref: '#/definitions/github_com_Skapar_backend_internal_models_entities.Role'
+    type: object
+  internal_handler.CreateOrUpdatePortfolioRequest:
+    properties:
+      quantity:
+        example: 2
+        type: number
+      stock_id:
+        example: 10
+        type: integer
+      user_id:
+        example: 1
+        type: integer
+    type: object
+  internal_handler.CreateOrderRequest:
+    properties:
+      quantity:
+        example: 2
+        type: integer
+      stock_id:
+        example: 4
+        type: integer
+      type:
+        description: BUY или SELL
+        example: BUY
+        type: string
+    type: object
+  internal_handler.ErrorResponse:
+    properties:
+      error:
+        example: invalid input
+        type: string
+    type: object
+  internal_handler.GetMeResponse:
+    properties:
+      balance:
+        example: 1000
+        type: number
+      email:
+        example: test@mail.com
+        type: string
+    type: object
+  internal_handler.HistoryCreatedResponse:
+    properties:
+      history_id:
+        example: 55
+        type: integer
+    type: object
+  internal_handler.IDResponse:
+    properties:
+      id:
+        example: 1
+        type: integer
+      message:
+        example: created
+        type: string
+    type: object
+  internal_handler.LoginRequest:
+    properties:
+      email:
+        example: test@mail.com
+        type: string
+      password:
+        example: "123456"
+        type: string
+    type: object
+  internal_handler.LoginResponse:
+    properties:
+      expiresIn:
+        example: 1730000000
+        type: integer
+      token:
+        example: eyJhbGciOi...
+        type: string
+    type: object
+  internal_handler.MessageResponse:
+    properties:
+      message:
+        example: ok
+        type: string
+    type: object
+  internal_handler.OrderCreatedResponse:
+    properties:
+      message:
+        example: order executed successfully
+        type: string
+      order_id:
+        example: 123
+        type: integer
+    type: object
+  internal_handler.RegisterRequest:
+    properties:
+      email:
+        example: test@mail.com
+        type: string
+      password:
+        example: "123456"
+        type: string
+      role:
+        example: TRADER
+        type: string
+    type: object
+  internal_handler.RegisterResponse:
+    properties:
+      message:
+        example: user created successfully
+        type: string
+      user_id:
+        example: 1
+        type: integer
+    type: object
+  internal_handler.UpdateOrderStatusRequest:
+    properties:
+      status:
+        example: COMPLETED
+        type: string
+    type: object
+  internal_handler.UpdateUserRequest:
+    properties:
+      balance:
+        example: 5000
+        type: number
+      email:
+        example: new@mail.com
+        type: string
+      password:
+        example: newpass123
+        type: string
+      role:
+        example: ADMIN
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Backend Stock API (Gin + PostgreSQL + JWT)
+  title: Backend API (Stock)
+  version: "1.0"
+paths:
+  /history/:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: History payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Skapar_backend_internal_models_entities.History'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_handler.HistoryCreatedResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add history record
+      tags:
+      - history
+  /history/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Skapar_backend_internal_models_entities.History'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get history (admin can pass user_id, trader gets own)
+      tags:
+      - history
+  /history/user/{user_id}:
+    get:
+      parameters:
+      - description: User ID (admin only)
+        in: path
+        name: user_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Skapar_backend_internal_models_entities.History'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get history (admin can pass user_id, trader gets own)
+      tags:
+      - history
+  /login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Login payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      summary: Login
+      tags:
+      - auth
+  /orders/:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Order payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_handler.OrderCreatedResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create order
+      tags:
+      - orders
+  /orders/{id}/status:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.UpdateOrderStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update order status (admin or owner)
+      tags:
+      - orders
+  /orders/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Skapar_backend_internal_models_entities.Order'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get orders (admin can pass user_id, trader gets own)
+      tags:
+      - orders
+  /orders/user/{user_id}:
+    get:
+      parameters:
+      - description: User ID (admin only)
+        in: path
+        name: user_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Skapar_backend_internal_models_entities.Order'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get orders (admin can pass user_id, trader gets own)
+      tags:
+      - orders
+  /portfolio/:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.CreateOrUpdatePortfolioRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create or update portfolio
+      tags:
+      - portfolio
+  /portfolio/{user_id}/{stock_id}:
+    get:
+      parameters:
+      - description: User ID (admin only)
+        in: path
+        name: user_id
+        type: integer
+      - description: Stock ID
+        in: path
+        name: stock_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Skapar_backend_internal_models_entities.Portfolio'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get portfolio record (admin can specify user_id, trader gets own)
+      tags:
+      - portfolio
+  /portfolio/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Skapar_backend_internal_models_entities.Portfolio'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get my portfolio
+      tags:
+      - portfolio
+  /register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Register payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_handler.RegisterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      summary: Register new user
+      tags:
+      - auth
+  /stocks/:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Skapar_backend_internal_models_entities.Stock'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all stocks
+      tags:
+      - stocks
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Stock payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_Skapar_backend_internal_models_entities.Stock'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_handler.IDResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create stock (admin)
+      tags:
+      - stocks
+  /stocks/{id}:
+    delete:
+      parameters:
+      - description: Stock ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete stock (admin)
+      tags:
+      - stocks
+    get:
+      parameters:
+      - description: Stock ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Skapar_backend_internal_models_entities.Stock'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get stock by ID
+      tags:
+      - stocks
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Stock ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Partial update payload (symbol/name/price)
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update stock (admin)
+      tags:
+      - stocks
+  /users/{id}:
+    delete:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete user (admin)
+      tags:
+      - users
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Skapar_backend_internal_models_entities.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user by ID (admin)
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update user (admin)
+      tags:
+      - users
+  /users/all:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_Skapar_backend_internal_models_entities.User'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get all users (admin)
+      tags:
+      - users
+  /users/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler.GetMeResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get my profile
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer {token}"
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
